@@ -1,0 +1,31 @@
+# Host CPU, memory, load, network (host_network: true), filesystems and uptime.
+# /proc inside an add-on reports the whole machine for these scrapers.
+receivers:
+  host_metrics:
+    collection_interval: "${env:SCRAPE_INTERVAL}"
+    scrapers:
+      cpu: {}
+      load: {}
+      memory: {}
+      network:
+        metrics:
+          # Needs to walk every host process's sockets; not worth the access.
+          system.network.connections:
+            enabled: false
+      paging: {}
+      # system.uptime: machine reboots without a template sensor.
+      system:
+        metrics:
+          system.uptime:
+            enabled: true
+      filesystem:
+        exclude_fs_types:
+          fs_types: [autofs, binfmt_misc, cgroup, cgroup2, devpts, devtmpfs, mqueue, nsfs, overlay, proc, pstore, squashfs, sysfs, tmpfs, tracefs]
+          match_type: strict
+
+service:
+  pipelines:
+    metrics/host:
+      receivers: [host_metrics]
+      processors: [resource]
+      exporters: [otlp_http]

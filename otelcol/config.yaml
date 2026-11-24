@@ -1,0 +1,52 @@
+name: OTel Collector (community)
+version: "0.2.2"
+slug: otelcol
+description: Community add-on running the upstream otelcol-contrib build to ship HAOS logs, Home Assistant metrics and host metrics over OTLP. Not affiliated with the OpenTelemetry project.
+url: https://github.com/nicolastakashi/ha-addon-otelcol
+# Prebuilt by CI (.github/workflows/builder.yaml). Remove this line to build locally.
+image: ghcr.io/nicolastakashi/{arch}-addon-otelcol
+arch:
+  - amd64
+  - aarch64
+init: false
+startup: services
+boot: auto
+# journald: read the HAOS system journal (host, Supervisor, Core, every add-on).
+journald: true
+# homeassistant_api: scrape Core /api/prometheus through the Supervisor proxy, no long-lived token.
+homeassistant_api: true
+# hassio_api: read the machine host name (/host/info) for host.name.
+hassio_api: true
+# host_network: hostmetrics sees the real network interfaces.
+host_network: true
+options:
+  otlp_endpoint: ""
+  otlp_headers: []
+  service_name: homeassistant
+  deployment_environment: home
+  resource_attributes: []
+  logs: true
+  logs_min_priority: info
+  logs_min_severity: info
+  logs_parse: false
+  ha_metrics: true
+  host_metrics: true
+  scrape_interval: 60s
+schema:
+  otlp_endpoint: str
+  otlp_headers:
+    - name: str
+      value: password
+  service_name: str
+  service_instance_id: str?
+  deployment_environment: str
+  resource_attributes:
+    - name: str
+      value: str
+  logs: bool
+  logs_min_priority: list(emerg|alert|crit|err|warning|notice|info|debug)
+  logs_min_severity: list(debug|info|warn|error|fatal)
+  logs_parse: bool
+  ha_metrics: bool
+  host_metrics: bool
+  scrape_interval: match(^[1-9][0-9]*(s|m)$)

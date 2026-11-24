@@ -1,0 +1,21 @@
+# Home Assistant Core metrics through the Supervisor proxy (homeassistant_api: true).
+# Needs the prometheus: integration enabled in Home Assistant. No long-lived token.
+receivers:
+  prometheus/homeassistant:
+    config:
+      scrape_configs:
+        - job_name: homeassistant
+          scrape_interval: "${env:SCRAPE_INTERVAL}"
+          metrics_path: /core/api/prometheus
+          scheme: http
+          authorization:
+            credentials: "${env:SUPERVISOR_TOKEN}"
+          static_configs:
+            - targets: [supervisor]
+
+service:
+  pipelines:
+    metrics/homeassistant:
+      receivers: [prometheus/homeassistant]
+      processors: [resource]
+      exporters: [otlp_http]

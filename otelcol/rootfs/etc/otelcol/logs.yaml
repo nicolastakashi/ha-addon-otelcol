@@ -1,0 +1,76 @@
+# HAOS system journal: host services, Supervisor, Core and every add-on container.
+receivers:
+  journald:
+    directory: /var/log/journal
+    start_at: end
+    priority: "${env:LOGS_MIN_PRIORITY}"
+    storage: file_storage
+    # Core/Supervisor messages carry ANSI colours, so journalctl emits them as
+    # byte arrays; this turns them back into strings.
+    convert_message_bytes: true
+
+processors:
+  transform/journald:
+    error_mode: ignore
+    log_statements:
+      - context: log
+        statements:
+          # Keep the journal fields we need before the body becomes MESSAGE.
+          - set(cache["prio"], body["PRIORITY"]) where IsMap(body)
+          - set(cache["container"], body["CONTAINER_NAME"]) where IsMap(body) and body["CONTAINER_NAME"] != nil
+          - set(attributes["systemd.unit"], body["_SYSTEMD_UNIT"]) where IsMap(body) and body["_SYSTEMD_UNIT"] != nil
+          - set(attributes["syslog.identifier"], body["SYSLOG_IDENTIFIER"]) where IsMap(body) and body["SYSLOG_IDENTIFIER"] != nil
+          - set(attributes["journald.boot_id"], body["_BOOT_ID"]) where IsMap(body) and body["_BOOT_ID"] != nil
+          # Log attribute, not resource: everything stays one service resource.
+          - set(attributes["haos.container"], cache["container"]) where cache["container"] != nil
+          - set(body, body["MESSAGE"]) where IsMap(body) and body["MESSAGE"] != nil
+          - replace_pattern(body, "\\x1b\\[[0-9;]*m", "") where IsString(body)
+
+          # Containers: Docker logs stderr as PRIORITY 3, so take the level from the text
+          # ("2026-01-01 12:00:00.000 WARNING (MainThread) ...": Core, Supervisor, most add-ons).
+          - merge_maps(cache, ExtractPatterns(body, "^\\S+ \\S+ (?P<level>DEBUG|INFO|WARNING|ERROR|CRITICAL) "), "upsert") where cache["container"] != nil and IsString(body)
+          # Python's default format ("INFO:2026-01-01 12:00:00,000:logger:text", e.g. File editor).
+          - merge_maps(cache, ExtractPatterns(body, "^(?P<level>DEBUG|INFO|WARNING|ERROR|CRITICAL):"), "upsert") where cache["container"] != nil and cache["level"] == nil and IsString(body)
+          - set(severity_number, SEVERITY_NUMBER_DEBUG) where cache["level"] == "DEBUG"
+          - set(severity_number, SEVERITY_NUMBER_INFO) where cache["level"] == "INFO"
+          - set(severity_number, SEVERITY_NUMBER_WARN) where cache["level"] == "WARNING"
+          - set(severity_number, SEVERITY_NUMBER_ERROR) where cache["level"] == "ERROR"
+          - set(severity_number, SEVERITY_NUMBER_FATAL) where cache["level"] == "CRITICAL"
+          # ponytail: container lines without a level default to INFO; add per-add-on parsers if needed.
+          - set(severity_number, SEVERITY_NUMBER_INFO) where cache["container"] != nil and cache["level"] == nil
+
+          # Host services and kernel: syslog priority.
+          - set(severity_number, SEVERITY_NUMBER_FATAL) where cache["container"] == nil and (cache["prio"] == "0" or cache["prio"] == "1" or cache["prio"] == "2")
+          - set(severity_number, SEVERITY_NUMBER_ERROR) where cache["container"] == nil and cache["prio"] == "3"
+          - set(severity_number, SEVERITY_NUMBER_WARN) where cache["container"] == nil and cache["prio"] == "4"
+          - set(severity_number, SEVERITY_NUMBER_INFO) where cache["container"] == nil and (cache["prio"] == "5" or cache["prio"] == "6")
+          - set(severity_number, SEVERITY_NUMBER_DEBUG) where cache["container"] == nil and cache["prio"] == "7"
+
+          - set(severity_text, "DEBUG") where severity_number >= SEVERITY_NUMBER_DEBUG and severity_number < SEVERITY_NUMBER_INFO
+          - set(severity_text, "INFO") where severity_number >= SEVERITY_NUMBER_INFO and severity_number < SEVERITY_NUMBER_WARN
+          - set(severity_text, "WARN") where severity_number >= SEVERITY_NUMBER_WARN and severity_number < SEVERITY_NUMBER_ERROR
+          - set(severity_text, "ERROR") where severity_number >= SEVERITY_NUMBER_ERROR and severity_number < SEVERITY_NUMBER_FATAL
+          - set(severity_text, "FATAL") where severity_number >= SEVERITY_NUMBER_FATAL
+
+  filter/drop:
+    error_mode: ignore
+    logs:
+      log_record:
+        # The collector's own logs: otherwise every export error is exported again.
+        # Also the Supervisor build container ("app_builder_local_otelcol") on updates.
+        - IsMatch(attributes["haos.container"], "^(addon|app)_(builder_)?[0-9a-z]+_otelcol$")
+        # Nothing to read: no MESSAGE field, or an empty/whitespace-only line.
+        - body == nil
+        - IsMap(body)
+        - IsString(body) and IsMatch(body, "^\\s*$")
+        # logs_min_severity, applied to the parsed severity (journald PRIORITY is
+        # meaningless for containers: stdout is 6, stderr is 3).
+        - severity_number < ${env:LOGS_MIN_SEVERITY_NUMBER}
+
+service:
+  pipelines:
+    logs:
+      receivers: [journald]
+      # Keep in sync with logs_parse.yaml, which replaces this list.
+      processors: [transform/journald, filter/drop, resource]
+      exporters: [otlp_http]

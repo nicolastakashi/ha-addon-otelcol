@@ -1,0 +1,40 @@
+configuration:
+  otlp_endpoint:
+    name: OTLP endpoint
+    description: Base OTLP/HTTP URL, e.g. https://ingress.example.com or http://192.0.2.10:4318. /v1/logs and /v1/metrics are appended.
+  otlp_headers:
+    name: OTLP headers
+    description: Extra request headers, typically the backend auth token (Authorization, x-api-key...). Values are hidden in the UI.
+  service_name:
+    name: service.name
+    description: Resource attribute set on every log and metric.
+  service_instance_id:
+    name: service.instance.id
+    description: Optional resource attribute, e.g. host:port of Home Assistant.
+  deployment_environment:
+    name: deployment.environment.name
+    description: Resource attribute, e.g. home or homelab.
+  resource_attributes:
+    name: Extra resource attributes
+    description: Additional name/value resource attributes (e.g. backend-specific ones).
+  logs:
+    name: Logs
+    description: Ship the HAOS system journal (host, Supervisor, Core, add-ons).
+  logs_min_priority:
+    name: Journal pre-filter
+    description: journald priority read from the journal. Keep it at info; containers log stdout as info and stderr as err, so a higher value drops whole containers. Use the minimum severity below instead.
+  logs_min_severity:
+    name: Minimum severity
+    description: Final filter on the parsed severity (debug, info, warn, error, fatal).
+  logs_parse:
+    name: Parse log lines
+    description: Turn JSON lines and Python log lines into attributes (thread.name, code.namespace) and keep only the message as body.
+  ha_metrics:
+    name: Home Assistant metrics
+    description: Scrape Core /api/prometheus through the Supervisor (needs the prometheus integration). No long-lived token.
+  host_metrics:
+    name: Host metrics
+    description: CPU, memory, load, paging, network and uptime of the machine.
+  scrape_interval:
+    name: Scrape interval
+    description: How often metrics are collected, e.g. 60s or 1m.

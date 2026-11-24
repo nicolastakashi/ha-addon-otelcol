@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- OTel Collector (community): three signals merge into one stream leaving the home -->
+  <g fill="none" stroke="#0D9488" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M100 64 V56 L60 18 L20 56 V110 H100 V104"/>
+    <path d="M34 68 C50 68 50 84 66 84"/>
+    <path d="M34 100 C50 100 50 84 66 84"/>
+    <path d="M34 84 H116"/>
+    <path d="M107 75 L116 84 L107 93"/>
+  </g>
+</svg>

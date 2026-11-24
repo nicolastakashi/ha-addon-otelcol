@@ -1,0 +1,37 @@
+# Optional (logs_parse: true): turn log lines into structured attributes.
+# Loaded after logs.yaml and replaces its processor list.
+processors:
+  transform/parse:
+    error_mode: ignore
+    log_statements:
+      - context: log
+        statements:
+          # JSON lines (many add-ons): every key becomes an attribute, msg/message becomes the body.
+          - set(cache["json"], ParseJSON(body)) where IsString(body) and IsMatch(body, "^\\s*\\{")
+          - merge_maps(attributes, cache["json"], "upsert") where IsMap(cache["json"])
+          - set(body, cache["json"]["message"]) where IsMap(cache["json"]) and cache["json"]["message"] != nil
+          - set(body, cache["json"]["msg"]) where IsMap(cache["json"]) and cache["json"]["msg"] != nil
+          # JSON "level" (zap, logrus, pino-style strings) overrides the severity.
+          - set(cache["jl"], ConvertCase(String(cache["json"]["level"]), "lower")) where IsMap(cache["json"]) and cache["json"]["level"] != nil
+          - set(severity_number, SEVERITY_NUMBER_DEBUG) where cache["jl"] == "debug" or cache["jl"] == "trace"
+          - set(severity_number, SEVERITY_NUMBER_INFO) where cache["jl"] == "info"
+          - set(severity_number, SEVERITY_NUMBER_WARN) where cache["jl"] == "warn" or cache["jl"] == "warning"
+          - set(severity_number, SEVERITY_NUMBER_ERROR) where cache["jl"] == "error"
+          - set(severity_number, SEVERITY_NUMBER_FATAL) where cache["jl"] == "fatal" or cache["jl"] == "panic" or cache["jl"] == "critical"
+          - set(severity_text, ConvertCase(cache["jl"], "upper")) where cache["jl"] != nil
+
+          # Python logging lines (Core, Supervisor, most add-ons):
+          # "2026-01-01 12:00:00.000 WARNING (MainThread) [homeassistant.components.x] text"
+          - merge_maps(cache, ExtractPatterns(body, "(?s)^\\S+ \\S+ [A-Z]+ \\((?P<thread>[^)]+)\\) \\[(?P<logger>[^\\]]+)\\] (?P<msg>.*)$"), "upsert") where IsString(body)
+          # Python's default format: "INFO:2026-01-01 12:00:00,529:hass_configurator.configurator:text"
+          - merge_maps(cache, ExtractPatterns(body, "(?s)^[A-Z]+:[0-9-]+ [0-9:,.]+:(?P<logger>[^:]+):(?P<msg>.*)$"), "upsert") where IsString(body) and cache["msg"] == nil
+          - set(attributes["thread.name"], cache["thread"]) where cache["thread"] != nil
+          - set(attributes["code.namespace"], cache["logger"]) where cache["logger"] != nil
+          - set(body, cache["msg"]) where cache["msg"] != nil
+
+service:
+  pipelines:
+    logs:
+      # Replaces the list in logs.yaml (keep the two in sync).
+      # filter/drop after parsing, so a line whose parsed message is empty is dropped too.
+      processors: [transform/journald, transform/parse, filter/drop, resource]
