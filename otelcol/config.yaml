@@ -10,7 +10,6 @@ arch:
   - aarch64
 init: false
 startup: services
-boot: auto
 # journald: read the HAOS system journal (host, Supervisor, Core, every add-on).
 journald: true
 # homeassistant_api: scrape Core /api/prometheus through the Supervisor proxy, no long-lived token.
