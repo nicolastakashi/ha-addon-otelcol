@@ -1,0 +1,15 @@
+# Automation and script runs as traces (homeassistantreceiver, our component).
+# Uses the Home Assistant WebSocket API through the Supervisor (homeassistant_api: true).
+receivers:
+  homeassistant:
+    endpoint: ws://supervisor/core/websocket
+    token: "${env:SUPERVISOR_TOKEN}"
+    poll_interval: 10s
+    domains: [automation, script]
+
+service:
+  pipelines:
+    traces:
+      receivers: [homeassistant]
+      processors: [resource]
+      exporters: [otlp_http]

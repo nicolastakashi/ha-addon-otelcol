@@ -32,6 +32,9 @@ configuration:
   ha_metrics:
     name: Home Assistant metrics
     description: Scrape Core /api/prometheus through the Supervisor (needs the prometheus integration). No long-lived token.
+  ha_traces:
+    name: Automation traces
+    description: Every automation and script run as a trace (trigger, conditions, actions with timing), from the Home Assistant trace store.
   host_metrics:
     name: Host metrics
     description: CPU, memory, load, paging, network and uptime of the machine.

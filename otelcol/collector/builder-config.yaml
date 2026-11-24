@@ -1,0 +1,30 @@
+# OpenTelemetry Collector Builder (OCB) manifest: only what the add-on uses.
+# Bump all versions together with the collector release (core stable modules are v1.x).
+dist:
+  name: otelcol-ha
+  description: OTel Collector for Home Assistant (community build)
+  output_path: ./_build
+  version: 0.3.0
+
+receivers:
+  - gomod: github.com/nicolastakashi/ha-addon-otelcol/otelcol/collector/receiver/homeassistantreceiver v0.0.0
+    path: ./receiver/homeassistantreceiver
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.165.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.165.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver v0.165.0
+
+processors:
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor v0.165.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.165.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.165.0
+
+exporters:
+  - gomod: go.opentelemetry.io/collector/exporter/otlphttpexporter v0.165.0
+
+extensions:
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage v0.165.0
+
+providers:
+  - gomod: go.opentelemetry.io/collector/confmap/provider/envprovider v1.71.0
+  - gomod: go.opentelemetry.io/collector/confmap/provider/fileprovider v1.71.0
+  - gomod: go.opentelemetry.io/collector/confmap/provider/yamlprovider v1.71.0

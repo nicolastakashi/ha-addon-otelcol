@@ -19,8 +19,22 @@ jobs:
         with:
           path: ./otelcol
 
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: otelcol/collector/receiver/homeassistantreceiver
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: otelcol/collector/receiver/homeassistantreceiver/go.mod
+          cache-dependency-path: otelcol/collector/receiver/homeassistantreceiver/go.sum
+      - run: go vet ./...
+      - run: go test -race -cover ./...
+
   build:
-    needs: lint
+    needs: [lint, test]
     runs-on: ubuntu-latest
     strategy:
       matrix:

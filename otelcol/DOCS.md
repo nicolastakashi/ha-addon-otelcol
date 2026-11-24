@@ -1,7 +1,8 @@
 # OTel Collector (community)
 
-Runs the upstream [otelcol-contrib](https://github.com/open-telemetry/opentelemetry-collector-contrib)
-binary inside Home Assistant OS and ships telemetry to any OTLP/HTTP backend
+Runs a purpose-built OpenTelemetry Collector (built with
+[OCB](https://opentelemetry.io/docs/collector/extend/ocb/) from upstream components plus
+our Home Assistant receiver) inside Home Assistant OS and ships telemetry to any OTLP/HTTP backend
 (`http/protobuf`).
 
 ## What it collects
@@ -9,6 +10,7 @@ binary inside Home Assistant OS and ships telemetry to any OTLP/HTTP backend
 | Option | Signal | Source |
 |---|---|---|
 | `logs` | Logs | HAOS system journal: host services, kernel, Supervisor, Core and every add-on |
+| `ha_traces` | Traces | Every automation and script run: a root span per run, a child span per step |
 | `ha_metrics` | Metrics | Core `/api/prometheus` through the Supervisor proxy (no long-lived token) |
 | `host_metrics` | Metrics | `system.cpu.*`, `system.memory.*`, `system.cpu.load_average.*`, `system.paging.*`, `system.network.*`, `system.uptime` |
 
@@ -26,6 +28,7 @@ logs_min_priority: info          # journald pre-filter, keep at info
 logs_min_severity: warn          # final filter on the parsed severity
 logs_parse: false                # JSON and Python log lines -> attributes
 ha_metrics: true
+ha_traces: true
 host_metrics: true
 scrape_interval: 60s
 ```
@@ -81,6 +84,20 @@ otlp_headers:
 - With `logs_parse: true`: JSON lines become attributes (`msg`/`message` as body, `level`
   as severity); Python lines add `thread.name` and `code.namespace` (logger) and keep only
   the message as body.
+
+## Automation traces
+
+`ha_traces` reads Home Assistant's own trace store (the one behind Settings → Automations →
+Traces) over the WebSocket API and turns each finished run into a trace:
+
+- Root span `automation <alias>` / `script <alias>` with the run's real start and end,
+  `homeassistant.trigger`, `homeassistant.context.*` and error status.
+- One child span per step (trigger, condition, action...), named from its path. Home Assistant
+  records only when a step starts, so a step ends when the next one starts.
+- The trace id is the run's context id (a ULID), so it can be correlated with HA logs.
+- Runs already stored when the add-on starts are not replayed.
+- Home Assistant keeps the last 5 runs per automation (`stored_traces`); more than 5 runs of
+  one automation within 10 s lose the oldest.
 
 ## Resource attributes
 

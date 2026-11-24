@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0
+
+- Own collector distribution built with OCB (`otelcol-ha`): only the components the add-on
+  uses, about a third of otelcol-contrib's size
+- New `homeassistant` receiver and `ha_traces` option: automation and script runs as traces
+- Cross-compiled per arch in CI (no QEMU), Go unit tests in CI
+
 ## 0.2.2
 
 - Renamed to "OTel Collector (community)", no "official" wording, non-affiliation disclaimer

@@ -78,6 +78,9 @@ fi
 if [ "$(opt .ha_metrics)" = "true" ]; then
   args="$args --config $CONF/ha_metrics.yaml"; features="$features ha_metrics"
 fi
+if [ "$(opt 'if .ha_traces == null then true else .ha_traces end')" = "true" ]; then
+  args="$args --config $CONF/ha_traces.yaml"; features="$features ha_traces"
+fi
 if [ "$(opt .host_metrics)" = "true" ]; then
   args="$args --config $CONF/host_metrics.yaml"; features="$features host_metrics"
 fi
@@ -89,7 +92,7 @@ fi
 
 # Never print credentials embedded in the URL (https://user:pass@host).
 safe_endpoint="$(printf '%s' "$OTLP_ENDPOINT" | sed -E 's#(://)[^/@]*@#\1***@#')"
-echo "[otelcol] $(otelcol-contrib --version)"
+echo "[otelcol] $(otelcol-ha --version)"
 echo "[otelcol] host.name=$HOST_NAME, exporting to $safe_endpoint:$features"
 # shellcheck disable=SC2086
-exec otelcol-contrib $args
+exec otelcol-ha $args
