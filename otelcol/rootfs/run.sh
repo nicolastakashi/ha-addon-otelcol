@@ -85,6 +85,12 @@ if [ "$(opt .host_metrics)" = "true" ]; then
   args="$args --config $CONF/host_metrics.yaml"; features="$features host_metrics"
 fi
 
+gates=""
+if [ "$(opt '.profiles // false')" = "true" ]; then
+  args="$args --config $CONF/profiles.yaml"; features="$features profiles(experimental)"
+  gates="--feature-gates=service.profilesSupport"
+fi
+
 if [ -z "$features" ]; then
   echo "[otelcol] every feature is disabled, nothing to do." >&2
   exit 1
@@ -95,4 +101,4 @@ safe_endpoint="$(printf '%s' "$OTLP_ENDPOINT" | sed -E 's#(://)[^/@]*@#\1***@#')
 echo "[otelcol] $(otelcol-ha --version)"
 echo "[otelcol] host.name=$HOST_NAME, exporting to $safe_endpoint:$features"
 # shellcheck disable=SC2086
-exec otelcol-ha $args
+exec otelcol-ha $gates $args

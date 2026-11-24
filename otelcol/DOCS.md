@@ -30,6 +30,7 @@ logs_parse: false                # JSON and Python log lines -> attributes
 ha_metrics: true
 ha_traces: true
 host_metrics: true
+profiles: false                  # experimental
 scrape_interval: 60s
 ```
 
@@ -98,6 +99,20 @@ Traces) over the WebSocket API and turns each finished run into a trace:
 - Runs already stored when the add-on starts are not replayed.
 - Home Assistant keeps the last 5 runs per automation (`stored_traces`); more than 5 runs of
   one automation within 10 s lose the oldest.
+
+## Profiles (experimental)
+
+With `profiles: true` the add-on accepts CPU/memory profiles from anything running on the
+Home Assistant host and forwards them as [OTel Profiles](https://opentelemetry.io/blog/2026/profiles-alpha/):
+
+- pprof: `POST http://127.0.0.1:4040/v1/pprof` with a serialized `profile.proto`
+  (`Content-Type: application/octet-stream`, gzip allowed).
+- OTLP/HTTP: `http://127.0.0.1:4318` (profiles; traces and logs are accepted too).
+
+Home Assistant does not produce profiles by itself: an in-process Python profiler (for example
+a custom integration) has to send them. Profiles are alpha in the protocol, in the collector
+(`service.profilesSupport` feature gate, enabled automatically) and in most backends; expect
+breaking changes. Check that your backend accepts OTLP profiles.
 
 ## Resource attributes
 

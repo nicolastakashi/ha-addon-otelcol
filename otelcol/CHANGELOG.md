@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0
+
+- Experimental `profiles` option: pprof (`127.0.0.1:4040/v1/pprof`) and OTLP (`127.0.0.1:4318`)
+  intake forwarded as OTel Profiles (feature gate enabled automatically)
+
 ## 0.3.0
 
 - Own collector distribution built with OCB (`otelcol-ha`): only the components the add-on

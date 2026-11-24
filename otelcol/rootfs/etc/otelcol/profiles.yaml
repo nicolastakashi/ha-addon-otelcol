@@ -1,0 +1,20 @@
+# Experimental (profiles: true). OTel Profiles is alpha everywhere: the protocol,
+# the collector support (service.profilesSupport feature gate) and most backends.
+# Something running inside Home Assistant (e.g. an in-process Python profiler)
+# sends to the add-on on the host network:
+#   pprof:  POST http://127.0.0.1:4040/v1/pprof   (application/octet-stream)
+#   OTLP:   http://127.0.0.1:4318                (profiles, also traces/logs)
+receivers:
+  pprof:
+    server:
+      endpoint: 127.0.0.1:4040
+  otlp/local:
+    protocols:
+      http:
+        endpoint: 127.0.0.1:4318
+
+service:
+  pipelines:
+    profiles:
+      receivers: [pprof, otlp/local]
+      exporters: [otlp_http]
