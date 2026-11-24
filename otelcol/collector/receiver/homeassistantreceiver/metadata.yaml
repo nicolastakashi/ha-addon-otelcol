@@ -1,0 +1,10 @@
+# mdatagen-style metadata, kept for an eventual donation to opentelemetry-collector-contrib.
+type: homeassistant
+
+status:
+  class: receiver
+  stability:
+    development: [traces]
+  distributions: []
+  codeowners:
+    active: [nicolastakashi]

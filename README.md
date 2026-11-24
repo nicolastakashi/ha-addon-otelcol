@@ -1,8 +1,16 @@
 # OTel Collector add-on for Home Assistant
 
-Community Home Assistant add-on (app) that runs the upstream OpenTelemetry
-Collector contrib distribution (`otelcol-contrib`), packaged to ship Home Assistant OS logs, Home Assistant
-metrics and host metrics to any OTLP backend.
+Community Home Assistant add-on (app) with a purpose-built OpenTelemetry Collector
+(OCB build of upstream components) that ships Home Assistant OS logs, automation traces,
+Home Assistant metrics and host metrics to any OTLP backend. Runs on amd64 and aarch64
+(Raspberry Pi).
+
+| Signal | Source |
+|---|---|
+| Logs | HAOS journal: host, Supervisor, Core, every add-on |
+| Traces | Automation and script runs ([Home Assistant receiver](otelcol/collector/receiver/homeassistantreceiver)) |
+| Metrics | Home Assistant `/api/prometheus`, host CPU/memory/network/uptime |
+| Profiles | Experimental pprof/OTLP intake |
 
 ![Builder](https://github.com/nicolastakashi/ha-addon-otelcol/actions/workflows/builder.yaml/badge.svg)
 
