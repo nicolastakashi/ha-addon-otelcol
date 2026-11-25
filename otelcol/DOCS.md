@@ -102,17 +102,32 @@ Traces) over the WebSocket API and turns each finished run into a trace:
 
 ## Profiles (experimental)
 
-With `profiles: true` the add-on accepts CPU/memory profiles from anything running on the
-Home Assistant host and forwards them as [OTel Profiles](https://opentelemetry.io/blog/2026/profiles-alpha/):
+With `profiles: true` the add-on sends profiles of Home Assistant itself as
+[OTel Profiles](https://opentelemetry.io/blog/2026/profiles-alpha/):
+
+1. Turn on `profiles` and start the add-on. It installs the bundled **OTel Profiler**
+   integration into `custom_components/otel_profiler` and shows a notification.
+2. Restart Home Assistant. The add-on sets the integration up by itself; nothing to configure.
+
+The integration samples every Python thread of Home Assistant 19 times per second
+(`sys._current_frames()`, standard library only) and pushes a pprof profile to the add-on
+every 10 s. It is a **wall-clock** profile: waiting threads (the event loop in `select`,
+idle executor workers) appear too, labelled with `thread.name`. Only Python frames are
+visible; time spent in C code is attributed to the Python function that called it.
+Add-on updates update the integration too (restart Home Assistant when notified).
+
+To stop: set `profiles: false` and remove the OTel Profiler integration (Settings → Devices &
+services), then delete `custom_components/otel_profiler`.
+
+The add-on also accepts profiles from anything else on the host:
 
 - pprof: `POST http://127.0.0.1:4040/v1/pprof` with a serialized `profile.proto`
   (`Content-Type: application/octet-stream`, gzip allowed).
 - OTLP/HTTP: `http://127.0.0.1:4318` (profiles; traces and logs are accepted too).
 
-Home Assistant does not produce profiles by itself: an in-process Python profiler (for example
-a custom integration) has to send them. Profiles are alpha in the protocol, in the collector
-(`service.profilesSupport` feature gate, enabled automatically) and in most backends; expect
-breaking changes. Check that your backend accepts OTLP profiles.
+Profiles are alpha in the protocol, in the collector (`service.profilesSupport` feature gate,
+enabled automatically) and in most backends; expect breaking changes. Check that your backend
+accepts OTLP profiles.
 
 ## Resource attributes
 

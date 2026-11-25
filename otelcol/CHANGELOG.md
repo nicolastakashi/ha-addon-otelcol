@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0
+
+- `profiles` now produces profiles of Home Assistant: the add-on installs a bundled
+  OTel Profiler integration (wall-clock sampler of every Python thread, standard library
+  only) and sets it up after a Home Assistant restart
+- Profiles carry the add-on resource attributes (`service.name`, `host.name`...)
+- The add-on maps the Home Assistant configuration folder (read-write) to install it
+
 ## 0.4.0
 
 - Experimental `profiles` option: pprof (`127.0.0.1:4040/v1/pprof`) and OTLP (`127.0.0.1:4318`)

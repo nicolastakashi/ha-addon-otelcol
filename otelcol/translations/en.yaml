@@ -40,7 +40,7 @@ configuration:
     description: CPU, memory, load, paging, network and uptime of the machine.
   profiles:
     name: Profiles (experimental)
-    description: Accept pprof (POST 127.0.0.1:4040/v1/pprof) and OTLP (127.0.0.1:4318) profiles from inside Home Assistant and forward them as OTel Profiles. Alpha in OpenTelemetry and in most backends.
+    description: Install the bundled OTel Profiler integration (samples Home Assistant's Python threads, restart Home Assistant once) and forward its profiles, plus any pprof (POST 127.0.0.1:4040/v1/pprof) or OTLP (127.0.0.1:4318) profiles, as OTel Profiles. Alpha in OpenTelemetry and in most backends.
   scrape_interval:
     name: Scrape interval
     description: How often metrics are collected, e.g. 60s or 1m.

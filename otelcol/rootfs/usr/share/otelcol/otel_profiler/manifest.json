@@ -1,0 +1,13 @@
+{
+  "domain": "otel_profiler",
+  "name": "OTel Profiler",
+  "codeowners": ["@nicolastakashi"],
+  "config_flow": true,
+  "documentation": "https://github.com/nicolastakashi/ha-addon-otelcol/blob/main/otelcol/DOCS.md#profiles-experimental",
+  "integration_type": "service",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/nicolastakashi/ha-addon-otelcol/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.5.0"
+}

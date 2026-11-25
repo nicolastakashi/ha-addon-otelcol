@@ -85,10 +85,42 @@ if [ "$(opt .host_metrics)" = "true" ]; then
   args="$args --config $CONF/host_metrics.yaml"; features="$features host_metrics"
 fi
 
+# Profiles producer: the add-on ships the otel_profiler integration and installs it into
+# Home Assistant. Copying needs a Core restart (we notify); the config entry is created in
+# the background as soon as Core has loaded the integration.
+PROFILER_SRC=/usr/share/otelcol/otel_profiler
+PROFILER_DST=/homeassistant/custom_components/otel_profiler
+core_post() {  # core_post <api path> <json>; token via a header file, never on the command line
+  hdr="$(mktemp)"
+  printf 'Authorization: Bearer %s\n' "$SUPERVISOR_TOKEN" > "$hdr"
+  curl -fsS --max-time 10 -X POST -H @"$hdr" -H 'Content-Type: application/json' \
+    -d "$2" "http://supervisor/core/api/$1"
+  rc=$?; rm -f "$hdr"; return $rc
+}
+setup_profiler() {
+  if ! diff -rq -x __pycache__ "$PROFILER_SRC" "$PROFILER_DST" >/dev/null 2>&1; then
+    mkdir -p "$(dirname "$PROFILER_DST")"
+    rm -rf "$PROFILER_DST" && cp -r "$PROFILER_SRC" "$PROFILER_DST"
+    echo "[otelcol] installed the OTel Profiler integration: restart Home Assistant to load it."
+    core_post services/persistent_notification/create '{"notification_id": "otelcol_profiler",
+      "title": "OTel Collector add-on",
+      "message": "The OTel Profiler integration was installed or updated. Restart Home Assistant to start sending profiles."}' \
+      >/dev/null 2>&1 || true
+  fi
+  # create_entry on the first success, abort ("already configured") afterwards; until Core
+  # has loaded the integration the flow fails and we retry.
+  ( until core_post config/config_entries/flow '{"handler": "otel_profiler"}' 2>/dev/null \
+        | jq -e '.type == "create_entry" or .type == "abort"' >/dev/null 2>&1; do sleep 30; done
+    echo "[otelcol] OTel Profiler integration is set up." ) &
+}
+
 gates=""
 if [ "$(opt '.profiles // false')" = "true" ]; then
   args="$args --config $CONF/profiles.yaml"; features="$features profiles(experimental)"
   gates="--feature-gates=service.profilesSupport"
+  setup_profiler
+elif [ -d "$PROFILER_DST" ]; then
+  echo "[otelcol] profiles is off: remove the OTel Profiler integration from Home Assistant to stop sampling."
 fi
 
 if [ -z "$features" ]; then

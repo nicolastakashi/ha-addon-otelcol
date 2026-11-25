@@ -1,5 +1,5 @@
 name: OTel Collector (community)
-version: "0.4.0"
+version: "0.5.0"
 slug: otelcol
 description: Community add-on with a purpose-built OpenTelemetry Collector that ships HAOS logs, automation traces, Home Assistant metrics and host metrics over OTLP. Not affiliated with the OpenTelemetry project.
 url: https://github.com/nicolastakashi/ha-addon-otelcol
@@ -18,6 +18,10 @@ homeassistant_api: true
 hassio_api: true
 # host_network: hostmetrics sees the real network interfaces.
 host_network: true
+# homeassistant_config: profiles installs the bundled otel_profiler integration into custom_components.
+map:
+  - type: homeassistant_config
+    read_only: false
 options:
   otlp_endpoint: ""
   otlp_headers: []

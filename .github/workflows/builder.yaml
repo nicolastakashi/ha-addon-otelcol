@@ -32,6 +32,11 @@ jobs:
           cache-dependency-path: otelcol/collector/receiver/homeassistantreceiver/go.sum
       - run: go vet ./...
       - run: go test -race -cover ./...
+      - name: OTel Profiler integration self-check (pprof readable by go tool pprof)
+        working-directory: .
+        run: |
+          python3 -I otelcol/tests/profiler_check.py "$RUNNER_TEMP/p.pb.gz"
+          go tool pprof -traces "$RUNNER_TEMP/p.pb.gz" | grep -q busy_marker
 
   build:
     needs: [lint, test]

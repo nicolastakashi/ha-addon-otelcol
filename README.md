@@ -10,7 +10,7 @@ Home Assistant metrics and host metrics to any OTLP backend. Runs on amd64 and a
 | Logs | HAOS journal: host, Supervisor, Core, every add-on |
 | Traces | Automation and script runs ([Home Assistant receiver](otelcol/collector/receiver/homeassistantreceiver)) |
 | Metrics | Home Assistant `/api/prometheus`, host CPU/memory/network/uptime |
-| Profiles | Experimental pprof/OTLP intake |
+| Profiles | Experimental: Home Assistant's Python threads, sampled by a bundled integration |
 
 ![Builder](https://github.com/nicolastakashi/ha-addon-otelcol/actions/workflows/builder.yaml/badge.svg)
 
