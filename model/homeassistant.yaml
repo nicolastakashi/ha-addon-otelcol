@@ -199,3 +199,44 @@ groups:
         requirement_level: recommended
       - ref: homeassistant.floor.name
         requirement_level: recommended
+
+  - id: registry.homeassistant.event
+    type: attribute_group
+    display_name: Home Assistant event attributes
+    brief: Bus events sent as log records.
+    attributes:
+      - id: homeassistant.event.type
+        type: string
+        stability: development
+        brief: Event type.
+        examples: [call_service, automation_triggered]
+      - id: homeassistant.event.origin
+        type: string
+        stability: development
+        brief: Where the event was fired.
+        examples: [LOCAL, REMOTE]
+      - id: homeassistant.event.data
+        type: template[string]
+        stability: development
+        brief: Event data, one attribute per key; nested values are JSON.
+        examples: ['{"entity_id":"switch.bomba"}']
+
+  - id: event.homeassistant.event
+    type: event
+    name: homeassistant.event
+    stability: development
+    brief: A Home Assistant bus event. The log record's event name is the event type and its trace id comes from the event's context id, so events caused by an automation share the run's trace.
+    attributes:
+      - ref: homeassistant.event.type
+        requirement_level: required
+      - ref: homeassistant.event.origin
+        requirement_level: recommended
+      - ref: homeassistant.event.data
+        requirement_level: recommended
+      - ref: homeassistant.context.id
+        requirement_level: recommended
+      - ref: homeassistant.context.parent_id
+        requirement_level: recommended
+      - ref: user.id
+        requirement_level:
+          conditionally_required: When a user caused the event.

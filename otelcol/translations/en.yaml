@@ -50,6 +50,12 @@ configuration:
   entity_metrics_exclude:
     name: Excluded entities
     description: Entity ids to leave out of entity metrics. Wildcards work, e.g. sensor.*_linkquality.
+  event_logs:
+    name: Event logs
+    description: Send Home Assistant events (call_service, automation_triggered...) as logs, linked to the automation trace that caused them.
+  event_logs_exclude:
+    name: Excluded event types
+    description: Event types not sent as logs. state_changed is excluded by default because entity metrics cover states.
   profiles:
     name: Profiles (experimental)
     description: Install the bundled OTel Profiler integration and send profiles of Home Assistant. Restart Home Assistant once after enabling. Needs a backend that accepts OTLP profiles.

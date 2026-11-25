@@ -1,0 +1,12 @@
+# Home Assistant bus events as log records, in the trace of the run that caused them.
+# exclude_event_types comes from run.sh.
+receivers:
+  homeassistant:
+    token: "${env:SUPERVISOR_TOKEN}"
+
+service:
+  pipelines:
+    logs/events:
+      receivers: [homeassistant]
+      processors: [resource]
+      exporters: [otlp_http]

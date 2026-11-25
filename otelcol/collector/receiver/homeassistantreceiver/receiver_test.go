@@ -200,6 +200,16 @@ func fakeHA(t *testing.T, runs *runList) *httptest.Server {
 				result = json.RawMessage(strings.Replace(sampleTrace, `"run_id": "r2"`, `"run_id": "`+cmd["run_id"].(string)+`"`, 1))
 			}
 			_ = wsjson.Write(ctx, c, map[string]any{"id": cmd["id"], "type": "result", "success": true, "result": result})
+			if cmd["type"] == "subscribe_events" {
+				for _, ev := range []string{
+					`{"event_type": "state_changed", "data": {}, "time_fired": "2026-11-25T10:00:00+00:00", "context": {"id": "01KAV3RQ5Y2G3H4J5K6M7N8P9Q"}}`,
+					`{"event_type": "call_service", "origin": "LOCAL", "time_fired": "2026-11-25T10:00:01+00:00",
+					  "data": {"domain": "switch", "service": "turn_on", "service_data": {"entity_id": "switch.bomba"}},
+					  "context": {"id": "01KAV3RQ5Y2G3H4J5K6M7N8P9Q", "parent_id": null, "user_id": "u1"}}`,
+				} {
+					_ = wsjson.Write(ctx, c, map[string]any{"id": cmd["id"], "type": "event", "event": json.RawMessage(ev)})
+				}
+			}
 		}
 	}))
 }
@@ -352,5 +362,35 @@ func TestEntityMetrics(t *testing.T) {
 	}
 	if _, ok := got["homeassistant.sensor.power"]; ok {
 		t.Error("unavailable sensor must not produce a value")
+	}
+}
+
+func TestEventsReceiver(t *testing.T) {
+	srv := fakeHA(t, &runList{})
+	defer srv.Close()
+	cfg := createDefaultConfig().(*Config)
+	cfg.Endpoint, cfg.Token = "ws"+strings.TrimPrefix(srv.URL, "http"), "secret"
+	sink := new(consumertest.LogsSink)
+	r := newEventsReceiver(receivertest.NewNopSettings(componentType), cfg, sink)
+	if err := r.Start(context.Background(), componenttest.NewNopHost()); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = r.Shutdown(context.Background()) }()
+	deadline := time.Now().Add(2 * time.Second)
+	for sink.LogRecordCount() == 0 && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if n := sink.LogRecordCount(); n != 1 { // state_changed is excluded by default
+		t.Fatalf("want 1 record, got %d", n)
+	}
+	lr := sink.AllLogs()[0].ResourceLogs().At(0).ScopeLogs().At(0).LogRecords().At(0)
+	if lr.EventName() != "call_service" || lr.TraceID() != traceIDFor("01KAV3RQ5Y2G3H4J5K6M7N8P9Q", "") {
+		t.Errorf("event %q trace %s: want call_service in the run's trace", lr.EventName(), lr.TraceID())
+	}
+	if v, _ := lr.Attributes().Get("homeassistant.event.data.service_data"); v.Str() != `{"entity_id":"switch.bomba"}` {
+		t.Errorf("service_data = %q", v.Str())
+	}
+	if v, _ := lr.Attributes().Get("user.id"); v.Str() != "u1" {
+		t.Errorf("user.id = %q", v.Str())
 	}
 }

@@ -30,6 +30,9 @@ type Config struct {
 	Entities bool `mapstructure:"entities"`
 	// ExcludeEntities are entity_id glob patterns (path.Match) left out of entity metrics.
 	ExcludeEntities []string `mapstructure:"exclude_entities"`
+	// ExcludeEventTypes are event types not sent as logs (state_changed by default:
+	// entity metrics already cover states).
+	ExcludeEventTypes []string `mapstructure:"exclude_event_types"`
 }
 
 // Validate checks the configuration.

@@ -8,6 +8,7 @@ Home Assistant OS and sends logs, traces, metrics and profiles to any [OTLP](htt
 | Signal | Option | Source |
 |---|---|---|
 | Logs | `logs` | HAOS systemd journal: host services, kernel, Supervisor, Core and every add-on |
+| Logs | `event_logs` | Home Assistant events, linked to the automation trace that caused them |
 | Traces | `ha_traces` | Automation and script runs, one trace per run ([Home Assistant receiver](otelcol/collector/receiver/homeassistantreceiver)) |
 | Metrics | `entity_metrics` | Every entity state, with device, area and floor |
 | Metrics | `container_metrics` | CPU, memory, disk and network of Core, the Supervisor and every add-on |

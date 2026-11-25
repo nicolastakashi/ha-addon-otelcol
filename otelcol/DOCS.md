@@ -14,8 +14,10 @@ Home Assistant.
 - Send data to your backend
 - Configuration reference
 - Logs
+- Event logs
 - Automation traces
-- Home Assistant metrics
+- Entity metrics
+- Home Assistant metrics (Prometheus)
 - Host metrics
 - Profiles (experimental)
 - Resource attributes
@@ -101,6 +103,8 @@ host_metrics: true
 container_metrics: true
 entity_metrics: true
 entity_metrics_exclude: []
+event_logs: true
+event_logs_exclude: [state_changed]
 profiles: false
 scrape_interval: 60s
 ```
@@ -135,6 +139,8 @@ scrape_interval: 60s
 | `ha_traces` | bool | `true` | Send every automation and script run as a trace. |
 | `entity_metrics` | bool | `true` | Send every entity state as a metric, with device, area and floor. See "Entity metrics". |
 | `entity_metrics_exclude` | list of entity ids | `[]` | Entities left out of entity metrics. Wildcards work, for example `sensor.*_linkquality`. |
+| `event_logs` | bool | `true` | Send Home Assistant events as logs, linked to the automation trace that caused them. See "Event logs". |
+| `event_logs_exclude` | list of event types | `[state_changed]` | Event types not sent. |
 | `ha_metrics` | bool | `false` | Scrape Home Assistant's Prometheus endpoint instead. Needs the Prometheus integration. |
 | `host_metrics` | bool | `true` | Send CPU, memory, load, paging, network, data disk and uptime metrics of the machine. |
 | `container_metrics` | bool | `true` | Send CPU, memory, disk and network of Home Assistant Core, the Supervisor and every started add-on. |
@@ -207,6 +213,21 @@ With `logs_parse: true`:
   (Home Assistant style only) and the logger to `python.logger.name`.
 
 `logs_min_severity` is applied after parsing, so a JSON `level` counts.
+
+## Event logs
+
+The `event_logs` option sends every Home Assistant bus event as a log record, as it
+happens: `call_service`, `automation_triggered`, `script_started`, `homeassistant_start`
+and so on. `state_changed` is left out by default because entity metrics already cover
+states; remove it from `event_logs_exclude` if you want every change.
+
+- The record's event name and body are the event type.
+- Its trace id comes from the event's context id, the same way a run's trace id does. The
+  events an automation causes, such as its `call_service` calls, appear in that run's
+  trace.
+- Attributes: `homeassistant.event.type`, `homeassistant.event.origin`,
+  `homeassistant.context.id`, `homeassistant.context.parent_id`, `user.id`, and one
+  `homeassistant.event.data.<key>` per data key (nested values as JSON).
 
 ## Automation traces
 
@@ -412,8 +433,8 @@ The registry builds on semantic conventions v1.37.0.
 | `thread.name` | log | logs (`logs_parse`) | Semconv |
 | `python.logger.name` | log | logs (`logs_parse`) | Custom |
 | JSON keys | log | logs (`logs_parse`) | From the log line |
-| `homeassistant.*` | span, metric | traces, entity metrics | Custom |
-| `user.id` | span | traces | Semconv |
+| `homeassistant.*` | span, metric, log | traces, entity metrics, event logs | Custom |
+| `user.id` | span, log | traces, event logs | Semconv |
 | `thread.name` | sample label | profiles | Semconv |
 | `system.*` | metric names | host metrics | Semconv |
 

@@ -103,6 +103,10 @@ if [ "$(opt 'if .entity_metrics == null then true else .entity_metrics end')" = 
   jq '{receivers: {homeassistant: {exclude_entities: (.entity_metrics_exclude // [])}}}' "$OPTS" > /tmp/entities.yaml
   args="$args --config $CONF/entity_metrics.yaml --config /tmp/entities.yaml"; features="$features entity_metrics"
 fi
+if [ "$(opt 'if .event_logs == null then true else .event_logs end')" = "true" ]; then
+  jq '{receivers: {homeassistant: {exclude_event_types: (.event_logs_exclude // ["state_changed"])}}}' "$OPTS" > /tmp/events.yaml
+  args="$args --config $CONF/event_logs.yaml --config /tmp/events.yaml"; features="$features event_logs"
+fi
 if [ "$(opt 'if .container_metrics == null then true else .container_metrics end')" = "true" ]; then
   args="$args --config $CONF/container_metrics.yaml"; features="$features container_metrics"
 fi

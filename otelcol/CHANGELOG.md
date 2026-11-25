@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.0
+
+### Added
+
+- `event_logs` option (on by default): Home Assistant bus events as log records, with the
+  trace id of the context that fired them, so an automation's `call_service` events sit in
+  its trace. `event_logs_exclude` (default `[state_changed]`) leaves event types out
+
 ## 0.9.0
 
 ### Added
