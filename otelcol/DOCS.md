@@ -14,6 +14,7 @@ Home Assistant.
 - Send data to your backend
 - Configuration reference
 - Logs
+- Structured Core logs
 - Event logs
 - Automation traces
 - Entity metrics
@@ -105,6 +106,7 @@ entity_metrics: true
 entity_metrics_exclude: []
 event_logs: true
 event_logs_exclude: [state_changed]
+core_logs: false
 profiles: false
 scrape_interval: 60s
 ```
@@ -141,6 +143,7 @@ scrape_interval: 60s
 | `entity_metrics_exclude` | list of entity ids | `[]` | Entities left out of entity metrics. Wildcards work, for example `sensor.*_linkquality`. |
 | `event_logs` | bool | `true` | Send Home Assistant events as logs, linked to the automation trace that caused them. See "Event logs". |
 | `event_logs_exclude` | list of event types | `[state_changed]` | Event types not sent. |
+| `core_logs` | bool | `false` | Install the bundled OTel Logs integration: Home Assistant's logs arrive structured and linked to automation traces. See "Structured Core logs". |
 | `ha_metrics` | bool | `false` | Scrape Home Assistant's Prometheus endpoint instead. Needs the Prometheus integration. |
 | `host_metrics` | bool | `true` | Send CPU, memory, load, paging, network, data disk and uptime metrics of the machine. |
 | `container_metrics` | bool | `true` | Send CPU, memory, disk and network of Home Assistant Core, the Supervisor and every started add-on. |
@@ -213,6 +216,30 @@ With `logs_parse: true`:
   (Home Assistant style only) and the logger to `python.logger.name`.
 
 `logs_min_severity` is applied after parsing, so a JSON `level` counts.
+
+## Structured Core logs
+
+With `core_logs: true`, the add-on installs the bundled **OTel Logs** integration, the
+same way `profiles` installs the profiler. Restart Home Assistant once; the add-on then
+sets the integration up by itself.
+
+The integration hands every log record Home Assistant writes to the add-on, instead of
+the journal line:
+
+- The logger name is the instrumentation scope, for example
+  `homeassistant.components.mqtt`.
+- `code.file.path`, `code.line.number`, `code.function.name`, `thread.name`, `thread.id`.
+- An exception becomes `exception.type`, `exception.message` and `exception.stacktrace` on
+  the same record.
+- A record written while an automation or script runs carries that run's trace id and the
+  id of its root span, so your backend shows the log inside the run's trace.
+
+The journal copy of Home Assistant Core's lines is dropped while `core_logs` is on, so
+nothing arrives twice. Records follow your `logger:` levels and `logs_min_severity`.
+
+To stop: set `core_logs: false`, delete the **OTel Logs** integration in **Settings →
+Devices & services**, delete `/config/custom_components/otel_logs` and restart Home
+Assistant.
 
 ## Event logs
 
@@ -522,14 +549,14 @@ Header values are hidden in the UI and never printed, but they are not encrypted
 Like every add-on option, they are stored in plain text in the add-on's `options.json`, so
 they end up in backups. Use a token with write-only (ingest) scope.
 
-With `profiles` on, the local endpoints `127.0.0.1:4040` and `127.0.0.1:4318` listen on the
-loopback interface of the host network. Other processes on the host, including add-ons
+With `profiles` or `core_logs` on, the local endpoints `127.0.0.1:4040` and `127.0.0.1:4318`
+listen on the loopback interface of the host network. Other processes on the host, including add-ons
 with host networking, can send to them.
 
 The add-on needs the system journal (read-only), the Home Assistant and Supervisor APIs,
 host networking, the Supervisor `manager` role to read the resource usage of Core and the
 add-ons, and read-write access to the Home Assistant configuration folder to install the
-profiler integration. Its own AppArmor profile allows, besides its image
+profiler and logs integrations. Its own AppArmor profile allows, besides its image
 files, reads of the journal, `/proc` and `/sys`, and writes only to `/data`, `/tmp` and
 `custom_components/otel_profiler`.
 

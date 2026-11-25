@@ -1,0 +1,13 @@
+{
+  "domain": "otel_logs",
+  "name": "OTel Logs",
+  "codeowners": ["@nicolastakashi"],
+  "config_flow": true,
+  "documentation": "https://github.com/nicolastakashi/ha-addon-otelcol/blob/main/otelcol/DOCS.md#structured-core-logs",
+  "integration_type": "service",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/nicolastakashi/ha-addon-otelcol/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.11.0"
+}

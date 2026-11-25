@@ -30,11 +30,13 @@ profile otelcol flags=(attach_disconnected,mediate_deleted) {
   /data/** rwk,
   /tmp/** rwk,
 
-  # profiles: install the otel_profiler integration
+  # profiles and core_logs: install the otel_profiler and otel_logs integrations
   /homeassistant/ r,
   /homeassistant/custom_components/ rw,
   /homeassistant/custom_components/otel_profiler/ rw,
   /homeassistant/custom_components/otel_profiler/** rw,
+  /homeassistant/custom_components/otel_logs/ rw,
+  /homeassistant/custom_components/otel_logs/** rw,
 
   # journald (journald: true mounts the host journal read-only)
   /var/log/journal/ r,

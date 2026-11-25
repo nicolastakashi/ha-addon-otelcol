@@ -114,8 +114,6 @@ fi
 # Profiles producer: the add-on ships the otel_profiler integration and installs it into
 # Home Assistant. Copying needs a Core restart (we notify); the config entry is created in
 # the background as soon as Core has loaded the integration.
-PROFILER_SRC=/usr/share/otelcol/otel_profiler
-PROFILER_DST=/homeassistant/custom_components/otel_profiler
 core_post() {  # core_post <api path> <json>; token via a header file, never on the command line
   hdr="$(mktemp)"
   printf 'Authorization: Bearer %s\n' "$SUPERVISOR_TOKEN" > "$hdr"
@@ -123,31 +121,54 @@ core_post() {  # core_post <api path> <json>; token via a header file, never on 
     -d "$2" "http://supervisor/core/api/$1"
   rc=$?; rm -f "$hdr"; return $rc
 }
-setup_profiler() {
-  if ! diff -rq -x __pycache__ "$PROFILER_SRC" "$PROFILER_DST" >/dev/null 2>&1; then
-    mkdir -p "$(dirname "$PROFILER_DST")"
-    rm -rf "$PROFILER_DST" && cp -r "$PROFILER_SRC" "$PROFILER_DST"
-    echo "[otelcol] installed the OTel Profiler integration: restart Home Assistant to load it."
-    core_post services/persistent_notification/create '{"notification_id": "otelcol_profiler",
-      "title": "OTel Collector add-on",
-      "message": "The OTel Profiler integration was installed or updated. Restart Home Assistant to start sending profiles."}' \
+# install_integration <domain> <name> <option>: copy the bundled integration into
+# custom_components when it differs (Core restart needed, we notify), then create its config
+# entry in the background as soon as Core has loaded it.
+install_integration() {
+  src="/usr/share/otelcol/$1"; dst="/homeassistant/custom_components/$1"
+  if ! diff -rq -x __pycache__ "$src" "$dst" >/dev/null 2>&1; then
+    mkdir -p "$(dirname "$dst")"
+    rm -rf "$dst" && cp -r "$src" "$dst"
+    echo "[otelcol] installed the $2 integration: restart Home Assistant to load it."
+    core_post services/persistent_notification/create "{\"notification_id\": \"otelcol_$1\",
+      \"title\": \"OTel Collector add-on\",
+      \"message\": \"The $2 integration was installed or updated ($3). Restart Home Assistant to load it.\"}" \
       >/dev/null 2>&1 || true
   fi
   # create_entry on the first success, abort ("already configured") afterwards; until Core
   # has loaded the integration the flow fails and we retry.
-  ( until core_post config/config_entries/flow '{"handler": "otel_profiler"}' 2>/dev/null \
+  ( until core_post config/config_entries/flow "{\"handler\": \"$1\"}" 2>/dev/null \
         | jq -e '.type == "create_entry" or .type == "abort"' >/dev/null 2>&1; do sleep 30; done
-    echo "[otelcol] OTel Profiler integration is set up." ) &
+    echo "[otelcol] $2 integration is set up." ) &
+}
+# remove_hint <domain> <name> <option>: the option is off but the integration is installed.
+remove_hint() {
+  if [ -d "/homeassistant/custom_components/$1" ]; then
+    echo "[otelcol] $3 is off: remove the $2 integration from Home Assistant to stop it."
+  fi
 }
 
 gates=""
 if [ "$(opt '.profiles // false')" = "true" ]; then
   args="$args --config $CONF/profiles.yaml"; features="$features profiles(experimental)"
   gates="--feature-gates=service.profilesSupport"
-  setup_profiler
-elif [ -d "$PROFILER_DST" ]; then
-  echo "[otelcol] profiles is off: remove the OTel Profiler integration from Home Assistant to stop sampling."
+  install_integration otel_profiler "OTel Profiler" profiles
+else
+  remove_hint otel_profiler "OTel Profiler" profiles
 fi
+
+# Structured Core logs: the bundled otel_logs integration posts Home Assistant's log records
+# (with the trace context of the run that wrote them) to the local OTLP receiver; the
+# journal copy of the homeassistant container is then dropped (CORE_LOGS_CONTAINER).
+CORE_LOGS_CONTAINER="-"
+if [ "$(opt '.core_logs // false')" = "true" ]; then
+  args="$args --config $CONF/core_logs.yaml"; features="$features core_logs"
+  CORE_LOGS_CONTAINER="homeassistant"
+  install_integration otel_logs "OTel Logs" core_logs
+else
+  remove_hint otel_logs "OTel Logs" core_logs
+fi
+export CORE_LOGS_CONTAINER
 
 if [ -z "$features" ]; then
   echo "[otelcol] every feature is disabled, nothing to do." >&2

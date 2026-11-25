@@ -1,0 +1,23 @@
+# Optional (core_logs: true): Home Assistant's log records from the bundled otel_logs
+# integration, structured (code.*, exception.*, logger as scope) and carrying the trace
+# context of the automation or script run that wrote them. run.sh also sets
+# CORE_LOGS_CONTAINER so filter/drop discards the journal copy of the same lines.
+receivers:
+  otlp/local:
+    protocols:
+      http:
+        endpoint: 127.0.0.1:4318
+
+processors:
+  filter/core_logs:
+    error_mode: ignore
+    logs:
+      log_record:
+        - severity_number < ${env:LOGS_MIN_SEVERITY_NUMBER}
+
+service:
+  pipelines:
+    logs/core:
+      receivers: [otlp/local]
+      processors: [filter/core_logs, resource]
+      exporters: [otlp_http]

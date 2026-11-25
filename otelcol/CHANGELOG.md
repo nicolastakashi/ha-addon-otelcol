@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.11.0
+
+### Added
+
+- `core_logs` option (off by default): installs the bundled OTel Logs integration, which
+  sends Home Assistant's log records structured (`code.*`, `exception.*`, logger as scope)
+  with the trace and root span ids of the automation or script run that wrote them. The
+  journal copy of Core's lines is dropped while it is on
+
 ## 0.10.1
 
 ### Changed

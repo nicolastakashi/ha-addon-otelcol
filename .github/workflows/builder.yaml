@@ -44,6 +44,9 @@ jobs:
       - name: Journald traceback recombine check
         working-directory: otelcol/tests/recombine
         run: go test ./...
+      - name: OTel Logs integration self-check
+        working-directory: .
+        run: python3 -I otelcol/tests/otel_logs_check.py
       - name: OTel Profiler integration self-check (pprof readable by go tool pprof)
         working-directory: .
         run: |
