@@ -2,7 +2,7 @@
 
 ![Builder](https://github.com/nicolastakashi/ha-addon-otelcol/actions/workflows/builder.yaml/badge.svg)
 
-A community Home Assistant add-on that runs a purpose-built OpenTelemetry Collector on
+A community Home Assistant add-on that runs a custom build of the OpenTelemetry Collector on
 Home Assistant OS and sends logs, traces, metrics and profiles to any OTLP/HTTP backend.
 
 OTLP is the OpenTelemetry protocol. Most observability backends accept it directly.

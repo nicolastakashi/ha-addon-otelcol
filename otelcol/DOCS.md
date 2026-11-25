@@ -158,13 +158,15 @@ the kernel, the Supervisor, Home Assistant Core and every add-on container.
 
 ### What a log record contains
 
-- **Body**: the journal `MESSAGE`, with ANSI colour codes removed.
-- **Severity for containers**: parsed from the text. Two formats are recognised:
-  - Home Assistant style: `2026-01-01 12:00:00.000 WARNING (MainThread) [logger] text`
-  - Python default: `WARNING:2026-01-01 12:00:00,000:logger:text`
+The body is the journal `MESSAGE`, with ANSI colour codes removed.
 
-  Container lines without a recognised level are `INFO`.
-- **Severity for host services and the kernel**: taken from the journal priority.
+For containers, the add-on reads the severity from the text. It recognises two formats:
+
+- Home Assistant style: `2026-01-01 12:00:00.000 WARNING (MainThread) [logger] text`
+- Python default: `WARNING:2026-01-01 12:00:00,000:logger:text`
+
+Container lines without a recognised level are `INFO`. For host services and the kernel,
+the severity comes from the journal priority:
 
 | Journal priority | Severity |
 |---|---|
@@ -196,11 +198,11 @@ resource (`service.name`).
 
 With `logs_parse: true`:
 
-- **JSON lines**: every top-level key becomes a log attribute. `message` or `msg` becomes
-  the body. A `level` key (`trace`, `debug`, `info`, `warn`, `warning`, `error`, `fatal`,
-  `panic`, `critical`) sets the severity.
-- **Python lines**: the body keeps only the message. The thread and logger move to
-  `thread.name` (Home Assistant style only) and `python.logger.name`.
+- In JSON lines, every top-level key becomes a log attribute and `message` or `msg`
+  becomes the body. A `level` key (`trace`, `debug`, `info`, `warn`, `warning`, `error`,
+  `fatal`, `panic`, `critical`) sets the severity.
+- In Python lines, the body keeps only the message. The thread goes to `thread.name`
+  (Home Assistant style only) and the logger to `python.logger.name`.
 
 `logs_min_severity` is applied after parsing, so a JSON `level` counts.
 
@@ -208,21 +210,24 @@ With `logs_parse: true`:
 
 The `ha_traces` option turns each finished automation or script run into a trace. It
 reads the same data as the **Traces** view of an automation in **Settings → Automations &
-scenes**, over the Home Assistant WebSocket API. It needs no token: the add-on uses its Supervisor token.
+scenes**, over the Home Assistant WebSocket API. You do not need a token: the add-on uses
+its Supervisor token.
 
 ### How a run maps to a trace
 
-- **Trace id**: the run's Home Assistant context id (a ULID). Search for the same id in Home
-  Assistant logs to correlate. If the context id is not a ULID, the trace id is a hash of
-  the run id.
-- **Root span**: `automation <alias>` or `script <alias>`, from the run's real start to its
-  end. Without an alias, the item id replaces it.
-- **Step spans**: one per trigger, condition and action, nested like the configuration. A
-  condition of a `choose` sits under its `choose` action.
-- **Step names** come from the configuration: the path part, the index, and the alias or
-  type. Examples: `action 2: Ligar resistência`, `action 3: switch.turn_on`,
-  `action 0: choose`, `conditions 0: state`.
-- **Errors**: a run or step with an error gets status `ERROR` and the error message.
+The trace id is the run's Home Assistant context id (a ULID), so you can search for the
+same id in Home Assistant logs. If the context id is not a ULID, the trace id is a hash of
+the run id.
+
+The root span is named `automation <alias>` or `script <alias>` (the item id when there is
+no alias) and lasts from the run's real start to its end. Under it there is one span per
+trigger, condition and action, nested like the configuration: a condition of a `choose`
+sits under its `choose` action.
+
+Step names come from the configuration: the path part, the index, and the alias or type,
+for example `action 2: Ligar resistência`, `action 3: switch.turn_on`, `action 0: choose`
+or `conditions 0: state`. A run or step with an error gets status `ERROR` and the error
+message.
 
 ### Span attributes
 
@@ -242,15 +247,13 @@ scenes**, over the Home Assistant WebSocket API. It needs no token: the add-on u
 
 ### Trace limitations
 
-- **Step durations are inferred.** Home Assistant records only when a step starts. A step
+- Step durations are inferred. Home Assistant records only when a step starts, so a step
   ends when the next step outside it starts, or when the run ends.
-- **Old runs are not replayed.** Runs already in the trace store when the add-on starts
-  are skipped.
-- **Bursts can lose runs.** Home Assistant keeps the last 5 runs per automation by default
-  (`stored_traces`). The add-on polls every 10 s, so more than 5 runs of one automation
-  within 10 s lose the oldest. Raise `stored_traces` in the automation's `trace:` settings
-  if this matters.
-- **The trace store is not a stable API.** A Home Assistant release can change its format.
+- Runs already in the trace store when the add-on starts are skipped.
+- Home Assistant keeps the last 5 runs per automation by default (`stored_traces`). The
+  add-on polls every 10 s, so more than 5 runs of one automation within 10 s lose the
+  oldest. Raise `stored_traces` in the automation's `trace:` settings if this matters.
+- The trace store is not a stable API. A Home Assistant release can change its format.
 
 ## Home Assistant metrics
 
@@ -302,11 +305,10 @@ Expect breaking changes. Check that your backend accepts OTLP profiles first.
 
 ### What the profiler samples
 
-- **Wall-clock samples** of every Python thread of Home Assistant, 19 times per second.
-  Waiting threads, such as the event loop in `select` or idle executor workers, appear too.
-- **Python frames only.** Time spent in C code is attributed to the Python function that
-  called it.
-- **Thread name** is a sample label, `thread.name`.
+The profiler takes wall-clock samples of every Python thread of Home Assistant, 19 times
+per second, so waiting threads (the event loop in `select`, idle executor workers) appear
+too. Each sample carries the thread name as the `thread.name` label. Only Python frames are
+visible: time spent in C code counts toward the Python function that called it.
 
 The integration uses only the Python standard library (`sys._current_frames()`). It pushes
 a pprof profile to the add-on at `127.0.0.1:4040` every 10 seconds.
@@ -406,12 +408,12 @@ Metric names from `ha_metrics` come from Home Assistant, not from semantic conve
 The add-on stores data on disk while your backend is unreachable, and sends it when the
 backend comes back.
 
-- **Queue**: up to 200 MB in the add-on's `/data` folder, retried with no time limit. Past
-  200 MB, new data is dropped.
-- **Journal position**: the add-on saves its place in the journal in `/data`. After a
-  restart it continues from there.
-- **What can still be lost**: the last few seconds of logs after a crash, and journal
-  entries that rotate out while the add-on is stopped.
+The queue holds up to 200 MB in the add-on's `/data` folder and retries with no time
+limit. Past 200 MB, new data is dropped. The add-on also saves its place in the journal in
+`/data`, so after a restart it continues from there.
+
+You can still lose the last few seconds of logs after a crash, and journal entries that
+rotate out while the add-on is stopped.
 
 ## Troubleshooting
 
@@ -449,12 +451,12 @@ lines with no recognised level.
 
 ### Profiles do not arrive
 
-- **Home Assistant not restarted.** The integration loads only after a restart. Until then
-  the add-on retries the setup every 30 seconds. When it succeeds, the log shows
+- Restart Home Assistant. The integration loads only after a restart; until then the
+  add-on retries the setup every 30 seconds. When it succeeds, the log shows
   `OTel Profiler integration is set up.`
-- **Backend does not accept profiles.** Check your backend's OTLP profiles support.
-- **Home Assistant log shows `Cannot push profiles to http://127.0.0.1:4040/v1/pprof`.**
-  The add-on is stopped or `profiles` is off.
+- Check that your backend accepts OTLP profiles.
+- If the Home Assistant log shows `Cannot push profiles to http://127.0.0.1:4040/v1/pprof`,
+  the add-on is stopped or `profiles` is off.
 
 ### No automation traces
 
@@ -474,20 +476,22 @@ outages"). Check:
 
 ## Privacy and security
 
-- **Where data goes**: only to `otlp_endpoint`. Logs and traces can contain personal data,
-  such as entity names, automation aliases, user ids and anything add-ons log.
-- **Header values are not encrypted at rest.** They are hidden in the UI and never printed,
-  but like every add-on option they are stored in plain text in the add-on's
-  `options.json`, so they end up in backups. Use a token with write-only (ingest) scope.
-- **Local endpoints** (`127.0.0.1:4040` and `127.0.0.1:4318`, `profiles` only) listen on
-  the loopback interface of the host network. Other processes on the host, including
-  add-ons with host networking, can send to them.
-- **Access the add-on needs**: the system journal (read-only), the Home Assistant and
-  Supervisor APIs, host networking, and read-write access to the Home Assistant
-  configuration folder to install the profiler integration.
-- **AppArmor**: the add-on ships its own AppArmor profile. Besides its own image files, it
-  allows reads of the journal, `/proc` and `/sys`, and writes only to `/data`, `/tmp` and
-  `custom_components/otel_profiler`.
+The add-on sends data only to `otlp_endpoint`. Logs and traces can contain personal data,
+such as entity names, automation aliases, user ids and anything add-ons log.
+
+Header values are hidden in the UI and never printed, but they are not encrypted at rest.
+Like every add-on option, they are stored in plain text in the add-on's `options.json`, so
+they end up in backups. Use a token with write-only (ingest) scope.
+
+With `profiles` on, the local endpoints `127.0.0.1:4040` and `127.0.0.1:4318` listen on the
+loopback interface of the host network. Other processes on the host, including add-ons
+with host networking, can send to them.
+
+The add-on needs the system journal (read-only), the Home Assistant and Supervisor APIs,
+host networking, and read-write access to the Home Assistant configuration folder to
+install the profiler integration. Its own AppArmor profile allows, besides its image
+files, reads of the journal, `/proc` and `/sys`, and writes only to `/data`, `/tmp` and
+`custom_components/otel_profiler`.
 
 ## Known limitations
 

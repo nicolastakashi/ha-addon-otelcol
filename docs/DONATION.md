@@ -22,10 +22,10 @@ A sponsor (approver or maintainer from a different company) and at least three c
 
 > **The purpose and use-cases of the new component**
 >
-> Home Assistant is a widely used open-source home automation platform. Its automations and
-> scripts record a detailed run trace (trigger, conditions, actions, timings, errors) in an
+> Home Assistant is an open-source home automation platform. Its automations and
+> scripts record a run trace (trigger, conditions, actions, timings, errors) in an
 > internal trace store. This receiver turns each finished run into an OpenTelemetry trace,
-> giving users latency and error visibility for their automations in any OTLP backend.
+> so users can see the latency and errors of their automations in any OTLP backend.
 >
 > **Example configuration for the component**
 >
