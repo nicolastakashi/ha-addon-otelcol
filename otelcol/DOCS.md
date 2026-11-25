@@ -9,26 +9,26 @@ Home Assistant.
 
 **Contents**
 
-- Concepts
-- Get started
-- Send data to your backend
-- Configuration reference
-- Logs
-- Structured Core logs
-- Event logs
-- Automation traces
-- Entity metrics
-- Home Assistant metrics (Prometheus)
-- Host metrics
-- Profiles (experimental)
-- Resource attributes
-- Attribute reference
-- Health sensors
-- Buffering and outages
-- Troubleshooting
-- Privacy and security
-- Known limitations
-- FAQ
+- [Concepts](#concepts)
+- [Get started](#get-started)
+- [Send data to your backend](#send-data-to-your-backend)
+- [Configuration reference](#configuration-reference)
+- [Logs](#logs)
+- [Structured Core logs](#structured-core-logs)
+- [Event logs](#event-logs)
+- [Automation traces](#automation-traces)
+- [Entity metrics](#entity-metrics)
+- [Home Assistant metrics (Prometheus)](#home-assistant-metrics-prometheus)
+- [Host metrics](#host-metrics)
+- [Profiles (experimental)](#profiles-experimental)
+- [Resource attributes](#resource-attributes)
+- [Attribute reference](#attribute-reference)
+- [Health sensors](#health-sensors)
+- [Buffering and outages](#buffering-and-outages)
+- [Troubleshooting](#troubleshooting)
+- [Privacy and security](#privacy-and-security)
+- [Known limitations](#known-limitations)
+- [FAQ](#faq)
 
 ## Concepts
 
