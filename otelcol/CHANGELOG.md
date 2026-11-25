@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.12.1
+
+### Fixed
+
+- `ha_metrics` stopped scraping in 0.8.0: its pipeline had the same name as the entity and
+  container metrics pipeline, so the last fragment replaced it. Pipelines now have unique
+  names and CI fails on a collision
+- `ha_metrics`: the scrape target (`server.address`, `server.port`, `url.scheme`,
+  `service.instance.id`) is no longer put on the resource
+
 ## 0.12.0
 
 ### Added

@@ -1,7 +1,8 @@
 # CPU, memory, disk and network of Core, the Supervisor and every started add-on, read
 # from the Supervisor (needs hassio_role: manager). Same receiver as ha_traces.
 # entity_metrics.yaml uses the same pipeline: one receiver in two metrics pipelines
-# would send everything twice.
+# would send everything twice. Never reuse a pipeline name from another fragment:
+# lists are replaced on merge, so the last fragment would silently win.
 receivers:
   homeassistant:
     token: "${env:SUPERVISOR_TOKEN}"
@@ -10,7 +11,7 @@ receivers:
 
 service:
   pipelines:
-    metrics/homeassistant:
+    metrics/ha_entities_containers:
       receivers: [homeassistant]
       processors: [resource]
       exporters: [otlp_http]

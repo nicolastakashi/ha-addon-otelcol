@@ -13,9 +13,19 @@ receivers:
           static_configs:
             - targets: [supervisor]
 
+processors:
+  # The prometheus receiver describes the scrape target on the resource; drop it so the
+  # metrics share the add-on's resource (service.instance.id comes from the option).
+  resource/prometheus:
+    attributes:
+      - {key: server.address, action: delete}
+      - {key: server.port, action: delete}
+      - {key: url.scheme, action: delete}
+      - {key: service.instance.id, action: delete}
+
 service:
   pipelines:
-    metrics/homeassistant:
+    metrics/prometheus:
       receivers: [prometheus/homeassistant]
-      processors: [resource]
+      processors: [resource/prometheus, resource]
       exporters: [otlp_http]

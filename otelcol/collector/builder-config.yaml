@@ -4,7 +4,7 @@ dist:
   name: otelcol-ha
   description: OTel Collector for Home Assistant (community build)
   output_path: ./_build
-  version: 0.12.0
+  version: 0.12.1
 
 receivers:
   - gomod: github.com/nicolastakashi/ha-addon-otelcol/otelcol/collector/receiver/homeassistantreceiver v0.0.0
