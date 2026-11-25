@@ -442,6 +442,10 @@ Every resource also carries:
 To see everything from this add-on, filter on `service.namespace`; to see Home Assistant
 Core only, on `service.name`.
 
+**Note:** Prometheus-compatible backends build the `job` label from
+`service.namespace/service.name`, so Home Assistant's `up` series has
+`job="homeassistant/homeassistant"`. Filter on `service_name` instead of `job`.
+
 ### Add your own resource attributes (advanced)
 
 Use `resource_attributes` for backend-specific attributes:
