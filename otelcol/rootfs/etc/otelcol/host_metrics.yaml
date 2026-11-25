@@ -31,5 +31,5 @@ service:
   pipelines:
     metrics/host:
       receivers: [host_metrics]
-      processors: [resource]
+      processors: [resource/haos, resource]
       exporters: [otlp_http]

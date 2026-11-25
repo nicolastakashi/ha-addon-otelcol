@@ -7,7 +7,7 @@ configuration:
     description: Request headers sent to the backend, usually the auth token (e.g. Authorization). Values are hidden here but stored in plain text in backups.
   service_name:
     name: service.name
-    description: Resource attribute set on every signal.
+    description: service.name of Home Assistant Core and service.namespace of every signal (the Supervisor, add-ons and the host get their own service.name).
   service_instance_id:
     name: service.instance.id
     description: Optional resource attribute, e.g. homeassistant.local:8123.

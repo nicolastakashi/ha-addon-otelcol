@@ -78,5 +78,5 @@ service:
     logs:
       receivers: [journald]
       # Keep in sync with logs_parse.yaml, which replaces this list.
-      processors: [transform/journald, filter/drop, groupbyattrs/container, resource]
+      processors: [transform/journald, filter/drop, groupbyattrs/container, transform/service, resource]
       exporters: [otlp_http]

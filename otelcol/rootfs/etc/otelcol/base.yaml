@@ -11,6 +11,24 @@ extensions:
       on_rebound: true
       directory: /data/storage
 
+processors:
+  # Names each resource after the component it describes, from container.name (pipelines
+  # that mix components: journal logs, entity + container metrics). Home Assistant Core is
+  # the service_name option, the Supervisor "supervisor", an add-on its slug, any other
+  # Supervisor container its name without "hassio_", the host (no container.name) "haos".
+  transform/service:
+    error_mode: ignore
+    log_statements: &service_statements
+      - context: resource
+        statements:
+          - set(attributes["service.name"], "haos") where attributes["container.name"] == nil
+          - set(attributes["service.version"], "${env:OS_VERSION}") where attributes["container.name"] == nil and "${env:OS_VERSION}" != ""
+          - set(attributes["service.name"], attributes["container.name"]) where attributes["container.name"] != nil
+          - replace_pattern(attributes["service.name"], "^(addon|hassio)_", "") where attributes["container.name"] != nil
+          - set(attributes["service.name"], "${env:SERVICE_NAME}") where attributes["container.name"] == "homeassistant"
+          - set(attributes["service.version"], "${env:HA_VERSION}") where attributes["container.name"] == "homeassistant" and "${env:HA_VERSION}" != ""
+    metric_statements: *service_statements
+
 exporters:
   otlp_http:
     endpoint: "${env:OTLP_ENDPOINT}"

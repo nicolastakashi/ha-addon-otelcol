@@ -13,5 +13,5 @@ service:
   pipelines:
     metrics/ha_entities_containers:
       receivers: [homeassistant]
-      processors: [resource]
+      processors: [transform/service, resource]
       exporters: [otlp_http]

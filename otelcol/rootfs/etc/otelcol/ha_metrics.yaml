@@ -27,5 +27,5 @@ service:
   pipelines:
     metrics/prometheus:
       receivers: [prometheus/homeassistant]
-      processors: [resource/prometheus, resource]
+      processors: [resource/prometheus, resource/core, resource]
       exporters: [otlp_http]

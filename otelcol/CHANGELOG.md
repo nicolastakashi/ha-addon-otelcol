@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.14.0
+
+### Changed
+
+- **Breaking, resources follow the semantic conventions:** `service.namespace` is the
+  `service_name` option and each component is its own `service.name`. Home Assistant Core
+  keeps `service_name` (`homeassistant`); the Supervisor is `supervisor`, an add-on its
+  slug, the host (kernel, systemd, host metrics) `haos`. `service.version` is the Core
+  version on Core resources and the OS version on the host. Backends that key resources on
+  the service (for example Dash0) no longer merge attributes across containers. Queries
+  that used `service.name=homeassistant` for host metrics or add-on and Supervisor logs
+  should use `service.namespace=homeassistant`
+
 ## 0.13.0
 
 ### Changed

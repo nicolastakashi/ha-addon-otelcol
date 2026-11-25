@@ -37,7 +37,7 @@ mkdir -p /data/storage
 # Real host name of the HAOS machine (the container hostname is the add-on slug), plus the
 # Home Assistant, OS and architecture versions for the resource attributes.
 # The token goes through a header file, so it never shows up in the process list.
-host_name=""; ha_version=""; os_description=""; arch=""
+host_name=""; ha_version=""; os_version=""; os_description=""; arch=""
 if [ -n "$SUPERVISOR_TOKEN" ]; then
   umask 077
   printf 'Authorization: Bearer %s\n' "$SUPERVISOR_TOKEN" > /tmp/supervisor.hdr
@@ -45,6 +45,7 @@ if [ -n "$SUPERVISOR_TOKEN" ]; then
   host_name="$(sup host/info .data.hostname)"
   os_description="$(sup host/info .data.operating_system)"
   ha_version="$(sup core/info .data.version)"
+  os_version="$(sup os/info .data.version)"
   arch="$(sup info .data.arch)"
   rm -f /tmp/supervisor.hdr
 else
@@ -58,24 +59,42 @@ case "$arch" in
 esac
 
 # Generated fragment: resource attributes and exporter headers.
-# Lists are replaced (not merged) across --config files, so the whole
-# resource processor is built here. JSON is valid YAML.
-# "$" is doubled because the collector expands ${...} in config values.
-jq --arg host "$HOST_NAME" --arg ver "$ha_version" --arg os "$os_description" --arg arch "$arch" '
+# Lists are replaced (not merged) across --config files, so the processors are built here.
+# JSON is valid YAML. "$" is doubled because the collector expands ${...} in config values.
+#
+# Resources follow the semantic conventions: service.namespace (the service_name option)
+# groups everything; each component is its own service.name (Home Assistant Core keeps the
+# service_name option, the Supervisor is "supervisor", an add-on its slug, the host "haos").
+#   resource       every signal: namespace, environment, host, OS, user attributes
+#   resource/core  pipelines that only carry Home Assistant Core data
+#   resource/haos  host metrics
+# Pipelines that mix components (journal logs, entity + container metrics) name each
+# resource from container.name in transform/service (base.yaml).
+HA_VERSION="$ha_version"; OS_VERSION="$os_version"
+export HA_VERSION OS_VERSION
+jq --arg host "$HOST_NAME" --arg ver "$ha_version" --arg osver "$os_version" \
+   --arg os "$os_description" --arg arch "$arch" '
   def esc: tostring | gsub("\\$"; "$$");
   def attr(k; v): {key: k, value: (v | esc), action: "upsert"};
+  def opt(k; v): if v != "" then [attr(k; v)] else [] end;
   {
-    processors: {resource: {attributes: (
-      [ attr("service.name"; .service_name),
-        attr("deployment.environment.name"; .deployment_environment),
-        attr("host.name"; $host),
-        attr("os.type"; "linux") ]
-      + (if $ver != "" then [attr("service.version"; $ver)] else [] end)
-      + (if $os != "" then [attr("os.description"; $os)] else [] end)
-      + (if $arch != "" then [attr("host.arch"; $arch)] else [] end)
-      + (if (.service_instance_id // "") != "" then [attr("service.instance.id"; .service_instance_id)] else [] end)
-      + ((.resource_attributes // []) | map(attr(.name; .value)))
-    )}},
+    processors: {
+      resource: {attributes: (
+        [ attr("service.namespace"; .service_name),
+          attr("deployment.environment.name"; .deployment_environment),
+          attr("host.name"; $host),
+          attr("os.type"; "linux") ]
+        + opt("os.description"; $os)
+        + opt("host.arch"; $arch)
+        + opt("service.instance.id"; .service_instance_id // "")
+        + ((.resource_attributes // []) | map(attr(.name; .value)))
+      )},
+      "resource/core": {attributes: (
+        [ attr("service.name"; .service_name), attr("container.name"; "homeassistant") ]
+        + opt("service.version"; $ver)
+      )},
+      "resource/haos": {attributes: ([attr("service.name"; "haos")] + opt("service.version"; $osver))}
+    },
     exporters: {otlp_http: {headers: ((.otlp_headers // []) | map({(.name): (.value | esc)}) | add // {})}}
   }' "$OPTS" > /tmp/generated.yaml
 

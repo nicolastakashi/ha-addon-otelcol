@@ -8,5 +8,5 @@ service:
   pipelines:
     logs/events:
       receivers: [homeassistant]
-      processors: [resource]
+      processors: [resource/core, resource]
       exporters: [otlp_http]

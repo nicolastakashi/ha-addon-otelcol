@@ -124,7 +124,7 @@ scrape_interval: 60s
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `service_name` | string | `homeassistant` | Sets `service.name` on every signal. |
+| `service_name` | string | `homeassistant` | `service.name` of Home Assistant Core and `service.namespace` of every signal. |
 | `service_instance_id` | string, optional | not set | Sets `service.instance.id`, for example `homeassistant.local:8123`. Omitted when empty. |
 | `deployment_environment` | string | `home` | Sets `deployment.environment.name`. |
 | `resource_attributes` | list of `name`/`value` | `[]` | Extra resource attributes. Advanced: see "Resource attributes". |
@@ -197,8 +197,8 @@ the severity comes from the journal priority:
 
 An entry from a container gets its own resource with `container.name` (`homeassistant`,
 `hassio_supervisor`, `addon_core_ssh`...), as the semantic conventions define it. Host
-services and the kernel keep the add-on's resource without it. Every resource has the same
-`service.name`.
+services and the kernel get the host resource (`service.name=haos`). See "Resource
+attributes".
 
 ### What is dropped
 
@@ -417,17 +417,30 @@ grant it to add-ons.
 
 ## Resource attributes
 
-Every signal carries these resource attributes:
+Resources follow the [semantic conventions](https://opentelemetry.io/docs/specs/semconv/resource/):
+each component is its own service, and `service.namespace` groups them all.
+
+| Component | `service.name` | `container.name` | `service.version` |
+|---|---|---|---|
+| Home Assistant Core: entity metrics, event logs, traces, Core logs, `ha_metrics`, profiles, its journal lines and container metrics | `service_name` option (`homeassistant`) | `homeassistant` | Core version |
+| Supervisor | `supervisor` | `hassio_supervisor` | |
+| An add-on | its slug, for example `core_ssh` | `addon_<slug>` | |
+| Other Supervisor containers | the name without `hassio_`, for example `dns` | `hassio_<name>` | |
+| The host: kernel and systemd journal lines, host metrics | `haos` | | Home Assistant OS version |
+
+Every resource also carries:
 
 | Attribute | Source |
 |---|---|
-| `service.name` | `service_name` option |
+| `service.namespace` | `service_name` option |
 | `deployment.environment.name` | `deployment_environment` option |
 | `host.name` | Host name of the Home Assistant OS machine, read from the Supervisor. Falls back to `homeassistant`. |
 | `service.instance.id` | `service_instance_id` option, when set |
-| `service.version` | Home Assistant Core version, read from the Supervisor |
 | `os.type`, `os.description` | `linux` and the Home Assistant OS version, for example `Home Assistant OS 18.4` |
 | `host.arch` | Machine architecture, for example `arm64` |
+
+To see everything from this add-on, filter on `service.namespace`; to see Home Assistant
+Core only, on `service.name`.
 
 ### Add your own resource attributes (advanced)
 
@@ -435,14 +448,12 @@ Use `resource_attributes` for backend-specific attributes:
 
 ```yaml
 resource_attributes:
-  - name: service.namespace
-    value: home
   - name: location
     value: lisbon
 ```
 
-The add-on applies these after the built-in ones. A name that is already set, such as
-`service.name`, is overwritten.
+The add-on applies these last, on every signal: a name that is already set, such as
+`service.namespace`, is overwritten everywhere.
 
 ## Attribute reference
 
@@ -453,7 +464,7 @@ The registry builds on semantic conventions v1.37.0.
 
 | Attribute | Level | Signal | Defined by |
 |---|---|---|---|
-| `service.name` | resource | all | Semconv |
+| `service.name`, `service.namespace` | resource | all | Semconv |
 | `service.instance.id` | resource | all | Semconv |
 | `deployment.environment.name` | resource | all | Semconv |
 | `host.name` | resource | all | Semconv |

@@ -17,5 +17,5 @@ service:
   pipelines:
     profiles:
       receivers: [pprof, otlp/local]
-      processors: [resource]
+      processors: [resource/core, resource]
       exporters: [otlp_http]
