@@ -49,9 +49,9 @@ def step_span_hex(run_id: str, path: str, started) -> str:
     return hashlib.sha256(f"{run_id}/{path}#{go_rfc3339nano(started)}".encode()).hexdigest()[:16]
 
 
-def trace_context(hass) -> tuple[str, str] | None:
-    """(trace id, span id) of the automation/script run this code runs in, if any: the span
-    of the step being executed, else the run's root span."""
+def trace_context(hass) -> tuple[str, str, str | None] | None:
+    """(trace id, span id, step path) of the automation/script run this code runs in, if
+    any: the span of the step being executed, else the run's root span."""
     try:
         from homeassistant.helpers.trace import trace_id_get, trace_stack_cv, trace_stack_top
 
@@ -59,16 +59,22 @@ def trace_context(hass) -> tuple[str, str] | None:
         if not key_run:
             return None
         key, run_id = key_run
-        run = hass.data.get("trace", {}).get(key, {}).get(run_id)
+        # hass.data["trace"][key] is a TraceBuckets (runs + not_triggered) in current Home
+        # Assistant, a plain dict of runs in older releases.
+        bucket = hass.data.get("trace", {}).get(key)
+        runs = getattr(bucket, "runs", bucket)
+        run = runs.get(run_id) if runs is not None else None
         context = getattr(run, "context", None)
+        if context is None:
+            return None  # without the run's context id the trace id would not match
         trace_id = ulid_hex(getattr(context, "id", "") or "")
         if trace_id is None:  # same fallback as the add-on: a hash of the run id
             trace_id = hashlib.sha256(run_id.encode()).hexdigest()[:32]
         step = trace_stack_top(trace_stack_cv)
         started = getattr(step, "_timestamp", None)
         if step is not None and started is not None and getattr(step, "path", None):
-            return trace_id, step_span_hex(run_id, step.path, started)
-        return trace_id, root_span_hex(run_id)
+            return trace_id, step_span_hex(run_id, step.path, started), step.path
+        return trace_id, root_span_hex(run_id), None
     except Exception:  # noqa: BLE001 - private API; logging must never break
         return None
 
@@ -83,7 +89,7 @@ def _attr(key: str, value) -> dict:
     return {"key": key, "value": v}
 
 
-def to_otlp(record: logging.LogRecord, ctx: tuple[str, str] | None) -> dict:
+def to_otlp(record: logging.LogRecord, ctx: tuple[str, str, str | None] | None) -> dict:
     attrs = [
         _attr("code.file.path", record.pathname),
         _attr("code.line.number", record.lineno),
@@ -107,7 +113,9 @@ def to_otlp(record: logging.LogRecord, ctx: tuple[str, str] | None) -> dict:
         "attributes": attrs,
     }
     if ctx:
-        out["traceId"], out["spanId"] = ctx
+        out["traceId"], out["spanId"], path = ctx
+        if path:
+            attrs.append(_attr("homeassistant.step.path", path))
     return out
 
 

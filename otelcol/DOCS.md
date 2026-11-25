@@ -262,7 +262,8 @@ the journal line:
   the same record.
 - A record written while an automation or script runs carries that run's trace id and the
   id of the step being executed (the root span outside a step), so your backend shows the
-  log under the exact step of the run's trace.
+  log under the exact step of the run's trace. The step's path is also an attribute,
+  `homeassistant.step.path`.
 
 The journal copy of Home Assistant Core's lines is dropped while `core_logs` is on, so
 nothing arrives twice. Records follow your `logger:` levels and `logs_min_severity`.

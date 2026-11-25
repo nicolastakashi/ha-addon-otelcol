@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.16.1
+
+### Fixed
+
+- Core logs carried no trace or span id: current Home Assistant stores traces in
+  `TraceBuckets` (`.runs`), which the integration did not read. Records written in a run
+  also get `homeassistant.step.path`
+
 ## 0.16.0
 
 ### Added
