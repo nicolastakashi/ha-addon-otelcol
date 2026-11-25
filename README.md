@@ -3,9 +3,7 @@
 ![Builder](https://github.com/nicolastakashi/ha-addon-otelcol/actions/workflows/builder.yaml/badge.svg)
 
 A community Home Assistant add-on that runs a custom build of the OpenTelemetry Collector on
-Home Assistant OS and sends logs, traces, metrics and profiles to any OTLP/HTTP backend.
-
-OTLP is the OpenTelemetry protocol. Most observability backends accept it directly.
+Home Assistant OS and sends logs, traces, metrics and profiles to any [OTLP](https://opentelemetry.io/docs/specs/otlp/)/HTTP backend.
 
 | Signal | Option | Source |
 |---|---|---|
@@ -103,8 +101,8 @@ OTLP/HTTP exporter.
 
 ## Semantic conventions and Weaver
 
-Semantic conventions (semconv) are the standard OpenTelemetry attribute names. The add-on
-uses [semantic conventions](https://opentelemetry.io/docs/specs/semconv/) wherever they exist (`service.*`, `host.name`, `container.name`, `thread.name`, `user.id`,
+The add-on uses [OpenTelemetry semantic conventions](https://opentelemetry.io/docs/specs/semconv/)
+wherever they exist (`service.*`, `host.name`, `container.name`, `thread.name`, `user.id`,
 `system.*` metrics). Attributes without a convention (`homeassistant.*`, `systemd.unit`,
 `syslog.identifier`, `journald.boot_id`, `python.logger.name`) are defined in a
 [Weaver](https://github.com/open-telemetry/weaver) registry in [`model/`](model/). The

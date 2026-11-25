@@ -9,6 +9,7 @@ Home Assistant.
 
 **Contents**
 
+- Concepts
 - Get started
 - Send data to your backend
 - Configuration reference
@@ -25,17 +26,15 @@ Home Assistant.
 - Known limitations
 - FAQ
 
-## Terms used here
+## Concepts
 
-| Term | Meaning |
-|---|---|
-| OpenTelemetry (OTel) | An open standard for logs, metrics, traces and profiles. |
-| Collector | A program that receives, processes and exports telemetry. This add-on runs one, called `otelcol-ha`. |
-| OTLP | The OpenTelemetry protocol. The add-on sends OTLP over HTTP (`http/protobuf`). |
-| Backend | The service that stores and shows your data: any vendor or self-hosted tool that accepts OTLP. |
-| Trace, span | A trace is one operation, such as one automation run. It is made of spans: one per step. |
-| Resource attribute | A key/value pair that describes the source of the data, such as `host.name`. It is set on every signal. |
-| Semantic conventions (semconv) | The standard OpenTelemetry attribute names, such as `container.name`. |
+New to OpenTelemetry? These pages explain the terms used here:
+[OpenTelemetry](https://opentelemetry.io/docs/what-is-opentelemetry/),
+[Collector](https://opentelemetry.io/docs/collector/),
+[OTLP](https://opentelemetry.io/docs/specs/otlp/),
+[signals](https://opentelemetry.io/docs/concepts/signals/) (traces, metrics, logs,
+profiles), [resources](https://opentelemetry.io/docs/concepts/resources/) and
+[semantic conventions](https://opentelemetry.io/docs/concepts/semantic-conventions/).
 
 ## Get started
 
@@ -370,7 +369,7 @@ The add-on applies these after the built-in ones. A name that is already set, su
 
 ## Attribute reference
 
-Every attribute the add-on emits. "Semconv" means an OpenTelemetry semantic convention.
+Every attribute the add-on emits. "Semconv" means an [OpenTelemetry semantic convention](https://opentelemetry.io/docs/specs/semconv/).
 "Custom" means defined in the add-on's Weaver registry, in the
 [`model/` folder of the repository](https://github.com/nicolastakashi/ha-addon-otelcol/tree/main/model).
 The registry builds on semantic conventions v1.37.0.
