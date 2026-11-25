@@ -83,7 +83,7 @@ weaver registry package -r model --future --v2 -o <dir> --resolved-schema-uri <u
 
 The registry is also the source of generated code and docs, the way the OpenTelemetry
 semantic-conventions repo works: Go constants for the receiver
-(`semconv_gen.go`) and the telemetry reference ([`docs/attributes.md`](docs/attributes.md)),
+(`semconv_gen.go`) and the telemetry reference ([`docs/telemetry.md`](docs/telemetry.md)),
 from the templates in [`templates/registry/`](templates/registry/). After changing `model/`:
 
 ```sh

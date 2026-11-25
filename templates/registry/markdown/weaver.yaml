@@ -1,5 +1,5 @@
 templates:
-  - pattern: attributes.md.j2
+  - pattern: telemetry.md.j2
     filter: '.'
     application_mode: single
-    file_name: attributes.md
+    file_name: telemetry.md

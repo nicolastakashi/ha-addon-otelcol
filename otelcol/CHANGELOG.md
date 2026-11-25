@@ -9,7 +9,7 @@
   `homeassistant.entity.state` (1, with the state in the `homeassistant.entity.state` attribute)
 - Automation traces: `homeassistant.step.variables.*`, `error.type=_OTHER` on failed runs
   and steps, and a span link from a step to the trace of the script or automation it started
-- Go constants and `docs/attributes.md` generated from the Weaver registry
+- Go constants and `docs/telemetry.md` generated from the Weaver registry
   (`scripts/generate.sh`), checked in CI
 
 ## 0.16.1

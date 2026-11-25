@@ -500,7 +500,7 @@ The add-on applies these last, on every signal: a name that is already set, such
 ## Attribute reference
 
 The full reference of everything defined in the registry, generated from it, is in
-[docs/attributes.md](https://github.com/nicolastakashi/ha-addon-otelcol/blob/main/docs/attributes.md).
+[docs/telemetry.md](https://github.com/nicolastakashi/ha-addon-otelcol/blob/main/docs/telemetry.md).
 
 Every attribute the add-on emits. "Semconv" means an [OpenTelemetry semantic convention](https://opentelemetry.io/docs/specs/semconv/).
 "Custom" means defined in the add-on's Weaver registry, in the
