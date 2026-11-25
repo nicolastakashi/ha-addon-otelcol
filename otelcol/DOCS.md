@@ -394,14 +394,6 @@ The registry builds on semantic conventions v1.37.0.
 
 Metric names from `ha_metrics` come from Home Assistant, not from semantic conventions.
 
-**Note:** Version 0.6.0 renamed three attributes. Update saved queries and dashboards:
-
-| Before 0.6.0 | From 0.6.0 |
-|---|---|
-| `haos.container` | `container.name` |
-| `homeassistant.context.user_id` | `user.id` |
-| `code.namespace` | `python.logger.name` |
-
 ## Buffering and outages
 
 The add-on stores data on disk while your backend is unreachable, and sends it when the

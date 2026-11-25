@@ -107,11 +107,6 @@ wherever they exist (`service.*`, `host.name`, `container.name`, `thread.name`, 
 [Weaver](https://github.com/open-telemetry/weaver) registry in [`model/`](model/). The
 registry depends on semantic conventions v1.37.0.
 
-> [!WARNING]
-> Version 0.6.0 renamed three attributes: `haos.container` → `container.name`,
-> `homeassistant.context.user_id` → `user.id`, `code.namespace` → `python.logger.name`.
-> Update saved queries and dashboards.
-
 ## Contributing
 
 Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) to build and test.
