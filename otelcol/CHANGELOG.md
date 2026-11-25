@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.17.1
+
+### Changed
+
+- Attribute metrics skip static configuration (`min`, `max`, `current`,
+  `display_precision`...) and GPS positions (`latitude`, `longitude`, `altitude`,
+  `gps_accuracy`, `radius`) by default, configurable with
+  `entity_metrics_attribute_exclude`
+- `homeassistant.entity.state` only for enumerable states (`input_select` options and
+  lowercase words), not free text, timestamps, versions or numbers
+
 ## 0.17.0
 
 ### Added

@@ -157,7 +157,7 @@ func (r *statsReceiver) entityMetrics(ctx context.Context, ms pmetric.MetricSlic
 
 		if r.cfg.EntityAttributes {
 			for k, v := range s.Attributes {
-				if f, ok := v.(float64); ok && numericAttribute(k) {
+				if f, ok := v.(float64); ok && !matchAny(r.cfg.ExcludeAttributes, k) {
 					add(get("homeassistant."+domain+".attribute."+k, ""), now, attrs, f)
 				}
 			}
@@ -172,7 +172,8 @@ func (r *statsReceiver) entityMetrics(ctx context.Context, ms pmetric.MetricSlic
 			add(get("homeassistant."+domain+".on", "1"), now, attrs, v)
 		case s.State == "unavailable" || s.State == "unknown" || s.State == "":
 		default:
-			if v, err := strconv.ParseFloat(s.State, 64); err == nil && numericDomains[domain] {
+			v, err := strconv.ParseFloat(s.State, 64)
+			if err == nil && numericDomains[domain] {
 				unit, _ := s.Attributes["unit_of_measurement"].(string)
 				name := "homeassistant." + domain + ".value"
 				if dc, _ := s.Attributes["device_class"].(string); domain == "sensor" && dc != "" {
@@ -181,8 +182,12 @@ func (r *statsReceiver) entityMetrics(ctx context.Context, ms pmetric.MetricSlic
 				add(get(name, unit), now, attrs, v)
 				continue
 			}
-			// A text state (heat, home, playing...): 1 with the state as an attribute.
-			// ponytail: one series per state value; exclude chatty entities if cardinality hurts.
+			// A text state (heat, home, playing...): 1 with the state as an attribute. Only
+			// enumerable states, so free text, timestamps, versions and numbers don't create a
+			// series per value.
+			if !enumerableState(domain, s.State) || err == nil {
+				continue
+			}
 			st := pcommon.NewMap()
 			attrs.CopyTo(st)
 			st.PutStr(AttrHomeassistantEntityState, s.State)
@@ -192,20 +197,35 @@ func (r *statsReceiver) entityMetrics(ctx context.Context, ms pmetric.MetricSlic
 	return nil
 }
 
-// numericAttribute keeps attributes that change with the entity (current_temperature,
-// brightness, battery_level...) and skips static ones (supported_features, min/max, steps).
-func numericAttribute(k string) bool {
-	return k != "supported_features" && !strings.HasPrefix(k, "min_") && !strings.HasPrefix(k, "max_") &&
-		!strings.HasSuffix(k, "step") && k != "friendly_name"
+// enumerableState reports whether a text state comes from a small fixed set: an
+// input_select option, or a lowercase word such as idle, open, not_home, above_horizon.
+func enumerableState(domain, state string) bool {
+	switch domain {
+	case "input_select", "select":
+		return true
+	case "input_text", "text":
+		return false
+	}
+	for _, c := range state {
+		if (c < 'a' || c > 'z') && c != '_' {
+			return false
+		}
+	}
+	return true
 }
 
-func (r *statsReceiver) excluded(entityID string) bool {
-	for _, p := range r.cfg.ExcludeEntities {
-		if ok, _ := path.Match(p, entityID); ok {
+// matchAny reports whether s matches one of the glob patterns (path.Match).
+func matchAny(patterns []string, s string) bool {
+	for _, p := range patterns {
+		if ok, _ := path.Match(p, s); ok {
 			return true
 		}
 	}
 	return false
+}
+
+func (r *statsReceiver) excluded(entityID string) bool {
+	return matchAny(r.cfg.ExcludeEntities, entityID)
 }
 
 func putAttr(m pcommon.Map, k string, v any) {

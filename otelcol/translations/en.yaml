@@ -59,6 +59,9 @@ configuration:
   entity_metrics_attributes:
     name: Entity attribute metrics
     description: Also send numeric entity attributes (current temperature, brightness, battery level...) as metrics.
+  entity_metrics_attribute_exclude:
+    name: Excluded entity attributes
+    description: Attribute names left out of the attribute metrics (wildcards work). The defaults skip static configuration and GPS positions (latitude, longitude...) for privacy.
   entity_metrics_exclude:
     name: Excluded entities
     description: Entity ids to leave out of entity metrics. Wildcards work, e.g. sensor.*_linkquality.

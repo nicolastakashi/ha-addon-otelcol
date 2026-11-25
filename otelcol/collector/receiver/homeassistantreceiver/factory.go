@@ -34,6 +34,7 @@ func createDefaultConfig() component.Config {
 		SupervisorEndpoint: "http://supervisor",
 		CollectionInterval: 60 * time.Second,
 		ExcludeEventTypes:  []string{"state_changed"},
+		ExcludeAttributes:  DefaultExcludeAttributes,
 	}
 }
 
@@ -47,4 +48,10 @@ func createMetrics(_ context.Context, set receiver.Settings, cfg component.Confi
 
 func createLogs(_ context.Context, set receiver.Settings, cfg component.Config, next consumer.Logs) (receiver.Logs, error) {
 	return newEventsReceiver(set, cfg.(*Config), next), nil
+}
+
+// DefaultExcludeAttributes leaves out static configuration and GPS positions (privacy).
+var DefaultExcludeAttributes = []string{
+	"supported_features", "min", "max", "min_*", "max_*", "*step", "current", "display_precision",
+	"latitude", "longitude", "altitude", "gps_accuracy", "radius",
 }

@@ -199,7 +199,10 @@ func fakeHA(t *testing.T, runs *runList) *httptest.Server {
 				result = json.RawMessage(`[
 					{"entity_id": "sensor.sala_temp", "state": "21.5", "last_updated": "2026-11-25T10:00:00+00:00", "attributes": {"device_class": "temperature", "unit_of_measurement": "°C", "friendly_name": "Sala"}},
 					{"entity_id": "switch.bomba", "state": "on", "attributes": {}},
-					{"entity_id": "climate.sala", "state": "heat", "attributes": {"current_temperature": 21.5, "min_temp": 7, "supported_features": 17, "hvac_action": "heating"}},
+					{"entity_id": "climate.sala", "state": "heat", "attributes": {"current_temperature": 21.5, "min_temp": 7, "max": 30, "supported_features": 17, "hvac_action": "heating"}},
+					{"entity_id": "person.ana", "state": "not_home", "attributes": {"latitude": 38.7, "longitude": -9.1}},
+					{"entity_id": "input_text.nota", "state": "texto livre", "attributes": {}},
+					{"entity_id": "sensor.last_boot", "state": "2026-11-26T00:21:27+00:00", "attributes": {"device_class": "timestamp"}},
 					{"entity_id": "sensor.texto", "state": "abc", "attributes": {}},
 					{"entity_id": "sensor.morto", "state": "unavailable", "attributes": {"device_class": "power"}},
 					{"entity_id": "sensor.ignorado", "state": "1", "attributes": {}}]`)
@@ -379,7 +382,7 @@ func TestEntityMetrics(t *testing.T) {
 		t.Errorf("switch on = %v", v)
 	}
 	avail := got["homeassistant.entity.available"].Gauge().DataPoints()
-	if avail.Len() != 5 { // the excluded entity is left out
+	if avail.Len() != 8 { // the excluded entity is left out
 		t.Errorf("available points: %d", avail.Len())
 	}
 	if _, ok := got["homeassistant.sensor.power"]; ok {
@@ -388,7 +391,8 @@ func TestEntityMetrics(t *testing.T) {
 	if m, ok := got["homeassistant.climate.attribute.current_temperature"]; !ok || m.Gauge().DataPoints().At(0).DoubleValue() != 21.5 {
 		t.Error("numeric attribute current_temperature missing")
 	}
-	for _, static := range []string{"homeassistant.climate.attribute.min_temp", "homeassistant.climate.attribute.supported_features"} {
+	for _, static := range []string{"homeassistant.climate.attribute.min_temp", "homeassistant.climate.attribute.max",
+		"homeassistant.climate.attribute.supported_features", "homeassistant.person.attribute.latitude"} {
 		if _, ok := got[static]; ok {
 			t.Errorf("static attribute %s must be skipped", static)
 		}
@@ -400,7 +404,7 @@ func TestEntityMetrics(t *testing.T) {
 		st, _ := sp.At(i).Attributes().Get("homeassistant.entity.state")
 		states[id.Str()] = st.Str()
 	}
-	if states["climate.sala"] != "heat" || states["sensor.texto"] != "abc" || len(states) != 2 {
+	if states["climate.sala"] != "heat" || states["sensor.texto"] != "abc" || states["person.ana"] != "not_home" || len(states) != 3 {
 		t.Errorf("text states: %v", states)
 	}
 	if v := got["homeassistant.core.up"].Gauge().DataPoints().At(0).DoubleValue(); v != 1 {
