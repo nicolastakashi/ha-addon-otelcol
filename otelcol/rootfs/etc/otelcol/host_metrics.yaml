@@ -1,4 +1,5 @@
-# Host CPU, memory, load, network (host_network: true), filesystems and uptime.
+# Host CPU, memory, load, paging, network (host_network: true) and uptime.
+# No filesystem scraper: inside the add-on container it sees no host partitions.
 # /proc inside an add-on reports the whole machine for these scrapers.
 receivers:
   host_metrics:
@@ -18,10 +19,6 @@ receivers:
         metrics:
           system.uptime:
             enabled: true
-      filesystem:
-        exclude_fs_types:
-          fs_types: [autofs, binfmt_misc, cgroup, cgroup2, devpts, devtmpfs, mqueue, nsfs, overlay, proc, pstore, squashfs, sysfs, tmpfs, tracefs]
-          match_type: strict
 
 service:
   pipelines:

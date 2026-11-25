@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.6.1
+
+### Changed
+
+- Docs: README, DOCS.md, option descriptions and receiver README rewritten for
+  Home Assistant users new to OpenTelemetry; configuration reference, attribute
+  reference and troubleshooting added
+
+- Host metrics: removed the filesystem scraper, which reported nothing inside the add-on
+  container
+
+### Fixed
+
+- Automation traces: runs still in Home Assistant's trace store were exported again every
+  24 hours (automations that run less than once a day)
+- Docs: the local OTLP endpoint (`profiles`) forwards profiles only, not traces or logs
+
 ## 0.6.0
 
 - **Breaking, attribute names follow OpenTelemetry semantic conventions:**

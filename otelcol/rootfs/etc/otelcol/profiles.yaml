@@ -3,7 +3,7 @@
 # The bundled otel_profiler integration (installed by run.sh) pushes pprof; anything else
 # on the host network can send too:
 #   pprof:  POST http://127.0.0.1:4040/v1/pprof   (application/octet-stream)
-#   OTLP:   http://127.0.0.1:4318                (profiles, also traces/logs)
+#   OTLP:   http://127.0.0.1:4318                (profiles only)
 receivers:
   pprof:
     server:

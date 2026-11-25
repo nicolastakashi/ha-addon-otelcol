@@ -23,6 +23,9 @@ Each finished run becomes one trace:
   correlated with Home Assistant logs; it falls back to a hash of the run id.
 - A run or step with an error gets `STATUS_CODE_ERROR` and the error message.
 - Runs already stored when the receiver starts are not replayed.
+- `user.id` follows OpenTelemetry semantic conventions. The `homeassistant.*` attributes are
+  defined in a [Weaver](https://github.com/open-telemetry/weaver) registry, in
+  [`model/homeassistant.yaml`](../../../../model/homeassistant.yaml).
 
 ## Configuration
 
@@ -34,6 +37,16 @@ receivers:
     poll_interval: 10s                         # default
     domains: [automation, script]              # default
 ```
+
+| Setting | Default | Description |
+|---|---|---|
+| `endpoint` | `ws://supervisor/core/websocket` | Home Assistant WebSocket API URL. Required. |
+| `token` | none | Access token of an admin user. Required. |
+| `poll_interval` | `10s` | How often `trace/list` is polled. Must be positive. |
+| `domains` | `[automation, script]` | Domains whose runs are collected. Must not be empty. |
+
+On connection or polling errors the receiver reconnects with exponential backoff, from
+1 s up to 1 min.
 
 The trace store needs an admin token: in an add-on use `SUPERVISOR_TOKEN` with
 `homeassistant_api: true`; elsewhere a long-lived access token of an admin user.

@@ -1,46 +1,46 @@
 configuration:
   otlp_endpoint:
     name: OTLP endpoint
-    description: Base OTLP/HTTP URL, e.g. https://ingress.example.com or http://192.0.2.10:4318. /v1/logs and /v1/metrics are appended.
+    description: Base OTLP/HTTP URL of your backend, without a signal path, e.g. https://otlp.example.com or http://192.0.2.10:4318. Required.
   otlp_headers:
     name: OTLP headers
-    description: Extra request headers, typically the backend auth token (Authorization, x-api-key...). Values are hidden in the UI.
+    description: Request headers sent to the backend, usually the auth token (e.g. Authorization). Values are hidden here but stored in plain text in backups.
   service_name:
     name: service.name
-    description: Resource attribute set on every log and metric.
+    description: Resource attribute set on every signal.
   service_instance_id:
     name: service.instance.id
-    description: Optional resource attribute, e.g. host:port of Home Assistant.
+    description: Optional resource attribute, e.g. homeassistant.local:8123.
   deployment_environment:
     name: deployment.environment.name
-    description: Resource attribute, e.g. home or homelab.
+    description: Resource attribute set on every signal, e.g. home or homelab.
   resource_attributes:
     name: Extra resource attributes
-    description: Additional name/value resource attributes (e.g. backend-specific ones).
+    description: Additional name/value resource attributes. They override the ones above if the name is the same.
   logs:
     name: Logs
-    description: Ship the HAOS system journal (host, Supervisor, Core, add-ons).
+    description: Send the Home Assistant OS system journal (host, kernel, Supervisor, Core, add-ons).
   logs_min_priority:
     name: Journal pre-filter
-    description: journald priority read from the journal. Keep it at info; containers log stdout as info and stderr as err, so a higher value drops whole containers. Use the minimum severity below instead.
+    description: Keep at info. Containers log stdout as info and stderr as err, so a stricter value drops whole containers. Use Minimum severity instead.
   logs_min_severity:
     name: Minimum severity
-    description: Final filter on the parsed severity (debug, info, warn, error, fatal).
+    description: Drop log records below this severity, after parsing. Use this to reduce log volume.
   logs_parse:
     name: Parse log lines
-    description: Turn JSON lines and Python log lines into attributes (thread.name, python.logger.name) and keep only the message as body.
+    description: Turn JSON and Python log lines into attributes (thread.name, python.logger.name) and keep only the message as body.
   ha_metrics:
     name: Home Assistant metrics
-    description: Scrape Core /api/prometheus through the Supervisor (needs the prometheus integration). No long-lived token.
+    description: Scrape /api/prometheus through the Supervisor. Needs the prometheus integration; no access token.
   ha_traces:
     name: Automation traces
-    description: Every automation and script run as a trace (trigger, conditions, actions with timing), from the Home Assistant trace store.
+    description: Send every finished automation and script run as a trace, one span per step.
   host_metrics:
     name: Host metrics
     description: CPU, memory, load, paging, network and uptime of the machine.
   profiles:
     name: Profiles (experimental)
-    description: Install the bundled OTel Profiler integration (samples Home Assistant's Python threads, restart Home Assistant once) and forward its profiles, plus any pprof (POST 127.0.0.1:4040/v1/pprof) or OTLP (127.0.0.1:4318) profiles, as OTel Profiles. Alpha in OpenTelemetry and in most backends.
+    description: Install the bundled OTel Profiler integration and send profiles of Home Assistant. Restart Home Assistant once after enabling. Needs a backend that accepts OTLP profiles.
   scrape_interval:
     name: Scrape interval
-    description: How often metrics are collected, e.g. 60s or 1m.
+    description: How often Home Assistant and host metrics are collected, e.g. 60s or 1m.

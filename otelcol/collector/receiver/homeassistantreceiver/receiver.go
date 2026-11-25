@@ -18,7 +18,7 @@ type haReceiver struct {
 	cancel context.CancelFunc
 	done   chan struct{}
 
-	seen   map[string]time.Time // domain/item/run -> when it was handled
+	seen   map[string]time.Time // domain/item/run -> last poll that listed it
 	primed bool                 // runs already stored at startup are not replayed
 }
 
@@ -92,7 +92,11 @@ func (r *haReceiver) poll(ctx context.Context, c *haClient) error {
 		}
 		for _, s := range list {
 			key := s.Domain + "/" + s.ItemID + "/" + s.RunID
-			if s.State != "stopped" || !r.seen[key].IsZero() {
+			if s.State != "stopped" {
+				continue
+			}
+			if !r.seen[key].IsZero() {
+				r.seen[key] = now // still in the store: keep it
 				continue
 			}
 			if !r.primed {
@@ -111,8 +115,10 @@ func (r *haReceiver) poll(ctx context.Context, c *haClient) error {
 		}
 	}
 	r.primed = true
+	// Forget runs Home Assistant no longer lists; forgetting by age re-exported
+	// runs of automations that run less than once per period.
 	for k, at := range r.seen {
-		if now.Sub(at) > 24*time.Hour {
+		if at.Before(now) {
 			delete(r.seen, k)
 		}
 	}

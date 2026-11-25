@@ -220,3 +220,35 @@ func TestConfigValidate(t *testing.T) {
 		t.Fatal("empty config must be invalid")
 	}
 }
+
+// A run still in the store must not be re-exported however old it is; a run that left
+// the store is forgotten.
+func TestPollKeepsListedRunsForgetsGoneOnes(t *testing.T) {
+	runs := &runList{ids: []string{"old1"}}
+	srv := fakeHA(t, runs)
+	defer srv.Close()
+	ctx := context.Background()
+	c, err := dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http"), "secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.close()
+	sink := new(consumertest.TracesSink)
+	cfg := createDefaultConfig().(*Config)
+	r := newReceiver(receivertest.NewNopSettings(componentType), cfg, sink)
+	r.primed = true
+	r.seen["automation/1791864237116/old1"] = time.Now().Add(-48 * time.Hour)
+	r.seen["automation/1791864237116/gone"] = time.Now().Add(-time.Minute)
+	if err := r.poll(ctx, c); err != nil {
+		t.Fatal(err)
+	}
+	if n := sink.SpanCount(); n != 0 {
+		t.Fatalf("re-exported a run still in the store: %d spans", n)
+	}
+	if _, ok := r.seen["automation/1791864237116/gone"]; ok {
+		t.Fatal("kept a run Home Assistant no longer lists")
+	}
+	if _, ok := r.seen["automation/1791864237116/old1"]; !ok {
+		t.Fatal("forgot a listed run")
+	}
+}
