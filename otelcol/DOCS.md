@@ -81,9 +81,9 @@ otlp_headers:
 - Severity: for containers it is read from the text (`2026-01-01 12:00:00.000 WARNING (...)`
   and Python's default `WARNING:...:logger:...`); container lines without a level are INFO.
   For host services and the kernel it comes from the journal priority.
-- Attributes: `systemd.unit`, `syslog.identifier`, `haos.container`, `journald.boot_id`.
+- Attributes: `container.name`, `systemd.unit`, `syslog.identifier`, `journald.boot_id`.
 - With `logs_parse: true`: JSON lines become attributes (`msg`/`message` as body, `level`
-  as severity); Python lines add `thread.name` and `code.namespace` (logger) and keep only
+  as severity); Python lines add `thread.name` and `python.logger.name` and keep only
   the message as body.
 
 ## Automation traces
@@ -92,10 +92,10 @@ otlp_headers:
 Traces) over the WebSocket API and turns each finished run into a trace:
 
 - Root span `automation <alias>` / `script <alias>` with the run's real start and end,
-  `homeassistant.trigger`, `homeassistant.context.*` and error status.
+  `homeassistant.trigger`, `homeassistant.context.*`, `user.id` and error status.
 - One span per step (trigger, condition, action...), nested like the automation (a condition
   sits under its `if`/`choose`, under its action) and named from the config, e.g.
-  `action 2: Ligar resistência` or `conditions 0: state`. Home Assistant records only when a
+  `action 2: Ligar resistência`, `action 0: choose` or `conditions 0: state`. Home Assistant records only when a
   step starts, so a step ends when the next step outside it starts.
 - The trace id is the run's context id (a ULID), so it can be correlated with HA logs.
 - Runs already stored when the add-on starts are not replayed.
@@ -130,6 +130,15 @@ The add-on also accepts profiles from anything else on the host:
 Profiles are alpha in the protocol, in the collector (`service.profilesSupport` feature gate,
 enabled automatically) and in most backends; expect breaking changes. Check that your backend
 accepts OTLP profiles.
+
+## Attribute names
+
+OpenTelemetry [semantic conventions](https://opentelemetry.io/docs/specs/semconv/) are used
+where they exist (`service.*`, `host.name`, `container.name`, `thread.name`, `user.id`,
+`system.*` metrics). Everything else (`homeassistant.*`, `systemd.unit`, `syslog.identifier`,
+`journald.boot_id`, `python.logger.name`) is defined in the add-on's
+[Weaver](https://github.com/open-telemetry/weaver) registry, in
+[`model/`](https://github.com/nicolastakashi/ha-addon-otelcol/tree/main/model).
 
 ## Resource attributes
 

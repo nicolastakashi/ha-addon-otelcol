@@ -28,7 +28,7 @@ configuration:
     description: Final filter on the parsed severity (debug, info, warn, error, fatal).
   logs_parse:
     name: Parse log lines
-    description: Turn JSON lines and Python log lines into attributes (thread.name, code.namespace) and keep only the message as body.
+    description: Turn JSON lines and Python log lines into attributes (thread.name, python.logger.name) and keep only the message as body.
   ha_metrics:
     name: Home Assistant metrics
     description: Scrape Core /api/prometheus through the Supervisor (needs the prometheus integration). No long-lived token.

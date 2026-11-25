@@ -22,7 +22,7 @@ processors:
           - set(attributes["syslog.identifier"], body["SYSLOG_IDENTIFIER"]) where IsMap(body) and body["SYSLOG_IDENTIFIER"] != nil
           - set(attributes["journald.boot_id"], body["_BOOT_ID"]) where IsMap(body) and body["_BOOT_ID"] != nil
           # Log attribute, not resource: everything stays one service resource.
-          - set(attributes["haos.container"], cache["container"]) where cache["container"] != nil
+          - set(attributes["container.name"], cache["container"]) where cache["container"] != nil
           - set(body, body["MESSAGE"]) where IsMap(body) and body["MESSAGE"] != nil
           - replace_pattern(body, "\\x1b\\[[0-9;]*m", "") where IsString(body)
 
@@ -58,7 +58,7 @@ processors:
       log_record:
         # The collector's own logs: otherwise every export error is exported again.
         # Also the Supervisor build container ("app_builder_local_otelcol") on updates.
-        - IsMatch(attributes["haos.container"], "^(addon|app)_(builder_)?[0-9a-z]+_otelcol$")
+        - IsMatch(attributes["container.name"], "^(addon|app)_(builder_)?[0-9a-z]+_otelcol$")
         # Nothing to read: no MESSAGE field, or an empty/whitespace-only line.
         - body == nil
         - IsMap(body)

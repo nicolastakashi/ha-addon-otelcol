@@ -16,7 +16,7 @@ Each finished run becomes one trace:
 
 | Span | Name | Timing | Attributes |
 |---|---|---|---|
-| Root | `automation <alias>` / `script <alias>` | run start → finish | `homeassistant.domain`, `.item_id`, `.run_id`, `.alias`, `.trigger`, `.script_execution`, `.context.id`, `.context.parent_id`, `.context.user_id` |
+| Root | `automation <alias>` / `script <alias>` | run start → finish | `homeassistant.domain`, `.item_id`, `.run_id`, `.alias`, `.trigger`, `.script_execution`, `.context.id`, `.context.parent_id`, `user.id` |
 | Step (nested by path) | last path part, index and what the config says, e.g. `action 2: Ligar resistência`, `conditions 0: state` | step start → start of the next step outside its subtree | `homeassistant.step.path`, `homeassistant.step.child` (called script run) |
 
 - The trace id is the run's Home Assistant context id (a ULID, 128 bits), so it can be

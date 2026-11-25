@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0
+
+- **Breaking, attribute names follow OpenTelemetry semantic conventions:**
+  `haos.container` → `container.name`, `homeassistant.context.user_id` → `user.id`,
+  `code.namespace` (deprecated) → `python.logger.name`. Update queries and dashboards
+- Attributes without a semantic convention are defined in a Weaver registry (`model/`),
+  checked in CI
+- Step spans without an alias are named by their type: `action 0: choose`, `action 1: if`
+
 ## 0.5.1
 
 - Automation traces: steps nest by path (an `if` condition sits under its `if`, under its

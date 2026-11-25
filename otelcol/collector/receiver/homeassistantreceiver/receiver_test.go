@@ -73,7 +73,7 @@ func TestToTraces(t *testing.T) {
 	}{
 		{"trigger 0: time_pattern", 0, 150},
 		{"action 0: Ligar resistencia", 0, 180},
-		{"action 1", 0, 300},
+		{"action 1: if", 0, 300},
 		{"if", 3, 300},
 		{"condition 0: state", 4, 300},
 		{"action 2: script.x", 0, 400},
@@ -110,6 +110,7 @@ func TestStepName(t *testing.T) {
 		"action/0/choose/0/conditions/0/entity_id/0": "entity_id 0: sensor.solar",
 		"action/0/choose/0/conditions/1/entity_id/1": "entity_id 1: switch.b",
 		"action/0/choose/9":                          "choose 9",
+		"action/0":                                   "action 0: choose",
 	} {
 		if got := stepName(path, cfg); got != want {
 			t.Errorf("%s: got %q, want %q", path, got, want)

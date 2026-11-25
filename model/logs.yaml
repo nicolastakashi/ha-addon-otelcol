@@ -1,0 +1,56 @@
+groups:
+  - id: registry.journald
+    type: attribute_group
+    display_name: Journal attributes
+    brief: Fields of the HAOS system journal (systemd-journald) kept on each log record.
+    attributes:
+      - id: systemd.unit
+        type: string
+        stability: development
+        brief: systemd unit that wrote the entry (`_SYSTEMD_UNIT`).
+        examples: [docker.service, NetworkManager.service]
+      - id: syslog.identifier
+        type: string
+        stability: development
+        brief: Syslog identifier of the entry (`SYSLOG_IDENTIFIER`).
+        examples: [kernel, dockerd]
+      - id: journald.boot_id
+        type: string
+        stability: development
+        brief: Boot the entry belongs to (`_BOOT_ID`).
+        examples: [3e1c0f6b2a9d4e8f9b7c6d5e4f3a2b1c]
+
+  - id: registry.python.logger
+    type: attribute_group
+    display_name: Python logging attributes
+    brief: Parsed from Python logging lines (`logs_parse`).
+    attributes:
+      - id: python.logger.name
+        type: string
+        stability: development
+        brief: Name of the Python logger that wrote the line.
+        examples: [homeassistant.components.mqtt, supervisor.addons.addon]
+
+  - id: event.journald.entry
+    type: event
+    name: journald.entry
+    stability: development
+    brief: A HAOS journal entry (host service, kernel, Supervisor, Core or add-on container).
+    attributes:
+      - ref: systemd.unit
+        requirement_level: recommended
+      - ref: syslog.identifier
+        requirement_level: recommended
+      - ref: journald.boot_id
+        requirement_level: recommended
+      - ref: container.name
+        requirement_level:
+          conditionally_required: When the entry comes from a container.
+        brief: Docker container that wrote the entry.
+        examples: [homeassistant, hassio_supervisor, addon_core_ssh]
+      - ref: thread.name
+        requirement_level:
+          conditionally_required: When `logs_parse` is on and the line names a thread.
+      - ref: python.logger.name
+        requirement_level:
+          conditionally_required: When `logs_parse` is on and the line is a Python logging line.

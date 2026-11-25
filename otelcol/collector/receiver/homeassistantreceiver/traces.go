@@ -89,7 +89,7 @@ func toTraces(d traceDetail) ptrace.Traces {
 	putIf(a, "homeassistant.script_execution", d.ScriptExecution)
 	putIf(a, "homeassistant.context.id", d.Context.ID)
 	putIf(a, "homeassistant.context.parent_id", d.Context.ParentID)
-	putIf(a, "homeassistant.context.user_id", d.Context.UserID)
+	putIf(a, "user.id", d.Context.UserID) // semconv user.id
 	if d.Error != "" {
 		root.Status().SetCode(ptrace.StatusCodeError)
 		root.Status().SetMessage(d.Error)
@@ -174,6 +174,12 @@ func stepName(path string, config map[string]any) string {
 	for _, k := range []string{"alias", "action", "service", "condition", "trigger", "platform"} {
 		if v, ok := node[k].(string); ok && v != "" {
 			return name + ": " + v
+		}
+	}
+	// No alias: structural steps are named by their type ("action 0: choose").
+	for _, k := range []string{"choose", "if", "repeat", "parallel", "sequence", "wait_template", "wait_for_trigger", "delay", "variables", "stop"} {
+		if _, ok := node[k]; ok {
+			return name + ": " + k
 		}
 	}
 	return name

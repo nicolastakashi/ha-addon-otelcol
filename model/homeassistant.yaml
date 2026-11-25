@@ -1,0 +1,97 @@
+groups:
+  - id: registry.homeassistant
+    type: attribute_group
+    display_name: Home Assistant run attributes
+    brief: An automation or script run read from Home Assistant's trace store.
+    attributes:
+      - id: homeassistant.domain
+        type: string
+        stability: development
+        brief: Domain of the item that ran.
+        examples: [automation, script]
+      - id: homeassistant.item_id
+        type: string
+        stability: development
+        brief: Id of the automation or script inside its domain.
+        examples: ["1712345678901", piscina_ligar]
+      - id: homeassistant.run_id
+        type: string
+        stability: development
+        brief: Id of the run in the trace store.
+        examples: [6a1f0c2e9b8d4f7a]
+      - id: homeassistant.alias
+        type: string
+        stability: development
+        brief: Human name of the automation or script.
+        examples: [Piscina]
+      - id: homeassistant.trigger
+        type: string
+        stability: development
+        brief: Description of what triggered the run.
+        examples: ["time pattern"]
+      - id: homeassistant.script_execution
+        type: string
+        stability: development
+        brief: How the run ended.
+        examples: [finished, failed_conditions, error, cancelled]
+      - id: homeassistant.context.id
+        type: string
+        stability: development
+        brief: Home Assistant context id of the run (a ULID, also used as the trace id).
+        examples: [01KAV3RQ5Y2G3H4J5K6M7N8P9Q]
+      - id: homeassistant.context.parent_id
+        type: string
+        stability: development
+        brief: Context id of the event or run that caused this run.
+        examples: [01KAV3RQ5Y2G3H4J5K6M7N8P9R]
+      - id: homeassistant.step.path
+        type: string
+        stability: development
+        brief: Path of the step in the automation or script config.
+        examples: [action/1/if/condition/0]
+      - id: homeassistant.step.child
+        type: string
+        stability: development
+        brief: Run started by the step, as domain.item_id/run_id.
+        examples: [script.rega/6a1f0c2e9b8d4f7a]
+
+  - id: span.homeassistant.run
+    type: span
+    span_kind: internal
+    stability: development
+    brief: An automation or script run (root span).
+    note: Named `automation <alias>` or `script <alias>`.
+    attributes:
+      - ref: homeassistant.domain
+        requirement_level: required
+      - ref: homeassistant.item_id
+        requirement_level: required
+      - ref: homeassistant.run_id
+        requirement_level: required
+      - ref: homeassistant.alias
+        requirement_level: recommended
+      - ref: homeassistant.trigger
+        requirement_level: recommended
+      - ref: homeassistant.script_execution
+        requirement_level: recommended
+      - ref: homeassistant.context.id
+        requirement_level: recommended
+      - ref: homeassistant.context.parent_id
+        requirement_level: recommended
+      - ref: user.id
+        requirement_level:
+          conditionally_required: When a user started the run.
+        brief: Home Assistant user id that started the run.
+
+  - id: span.homeassistant.step
+    type: span
+    span_kind: internal
+    stability: development
+    brief: One step of a run (trigger, condition, action...).
+    note: 'Named `<kind> <index>: <alias or type>`, e.g. `action 2: Ligar resistência`.'
+    attributes:
+      - ref: homeassistant.step.path
+        requirement_level: required
+      - ref: homeassistant.step.child
+        requirement_level:
+          conditionally_required: When the step started a script or automation run.

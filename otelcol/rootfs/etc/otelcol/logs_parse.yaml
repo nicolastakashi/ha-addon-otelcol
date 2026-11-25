@@ -26,7 +26,7 @@ processors:
           # Python's default format: "INFO:2026-01-01 12:00:00,529:hass_configurator.configurator:text"
           - merge_maps(cache, ExtractPatterns(body, "(?s)^[A-Z]+:[0-9-]+ [0-9:,.]+:(?P<logger>[^:]+):(?P<msg>.*)$"), "upsert") where IsString(body) and cache["msg"] == nil
           - set(attributes["thread.name"], cache["thread"]) where cache["thread"] != nil
-          - set(attributes["code.namespace"], cache["logger"]) where cache["logger"] != nil
+          - set(attributes["python.logger.name"], cache["logger"]) where cache["logger"] != nil
           - set(body, cache["msg"]) where cache["msg"] != nil
 
 service:
