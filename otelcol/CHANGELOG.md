@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.11.1
+
+### Fixed
+
+- Logs: no "entry does not contain the combine_field" errors for journal entries without a
+  message
+
 ## 0.11.0
 
 ### Added

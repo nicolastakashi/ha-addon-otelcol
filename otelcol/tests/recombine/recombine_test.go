@@ -21,6 +21,7 @@ func TestTraceback(t *testing.T) {
 		Receivers struct {
 			Journald struct {
 				Operators []struct {
+					Type         string `yaml:"type"`
 					IsFirstEntry string `yaml:"is_first_entry"`
 					CombineWith  string `yaml:"combine_with"`
 				} `yaml:"operators"`
@@ -30,7 +31,11 @@ func TestTraceback(t *testing.T) {
 	if err := yaml.Unmarshal(raw, &c); err != nil {
 		t.Fatal(err)
 	}
-	o := c.Receivers.Journald.Operators[0]
+	ops := c.Receivers.Journald.Operators
+	o := ops[len(ops)-1]
+	if o.Type != "recombine" {
+		t.Fatalf("last operator is %q, want recombine", o.Type)
+	}
 	cfg := recombine.NewConfig()
 	cfg.CombineField = entry.NewBodyField("MESSAGE")
 	cfg.SourceIdentifier = entry.NewBodyField("SYSLOG_IDENTIFIER")

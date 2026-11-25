@@ -2,6 +2,11 @@
 receivers:
   journald:
     operators:
+      # recombine reads MESSAGE from every entry; a few journal entries have none.
+      - type: add
+        if: body.MESSAGE == nil
+        field: body.MESSAGE
+        value: ""
       # Docker writes one journal entry per line, so a Python traceback arrives as many
       # entries. Join continuation lines (indented, "Traceback ...", chained-exception
       # headers, the final "SomeError: ...") to the entry that started them, per container.
