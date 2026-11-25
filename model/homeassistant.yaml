@@ -44,6 +44,17 @@ groups:
         stability: development
         brief: Context id of the event or run that caused this run.
         examples: [01KAV3RQ5Y2G3H4J5K6M7N8P9R]
+      - id: homeassistant.last_step
+        type: string
+        stability: development
+        brief: Path of the last step the run reached.
+        examples: [action/2]
+      - id: homeassistant.step.result
+        type: template[string]
+        stability: development
+        brief: Scalar values of the step result, one attribute per key (a condition's `result`, an action's `running_script`...).
+        note: Values keep their type (boolean, double or string); nested values such as service parameters are not recorded.
+        examples: ["true"]
       - id: homeassistant.step.path
         type: string
         stability: development
@@ -78,6 +89,8 @@ groups:
         requirement_level: recommended
       - ref: homeassistant.context.parent_id
         requirement_level: recommended
+      - ref: homeassistant.last_step
+        requirement_level: recommended
       - ref: user.id
         requirement_level:
           conditionally_required: When a user started the run.
@@ -92,6 +105,8 @@ groups:
     attributes:
       - ref: homeassistant.step.path
         requirement_level: required
+      - ref: homeassistant.step.result
+        requirement_level: recommended
       - ref: homeassistant.step.child
         requirement_level:
           conditionally_required: When the step started a script or automation run.

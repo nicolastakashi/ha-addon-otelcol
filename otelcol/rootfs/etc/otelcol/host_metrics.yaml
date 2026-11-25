@@ -1,5 +1,5 @@
 # Host CPU, memory, load, paging, network (host_network: true) and uptime.
-# No filesystem scraper: inside the add-on container it sees no host partitions.
+# filesystem: only /data, the add-on's bind mount of the HAOS data partition.
 # /proc inside an add-on reports the whole machine for these scrapers.
 receivers:
   host_metrics:
@@ -19,6 +19,10 @@ receivers:
         metrics:
           system.uptime:
             enabled: true
+      filesystem:
+        include_mount_points:
+          mount_points: [/data]
+          match_type: strict
 
 service:
   pipelines:

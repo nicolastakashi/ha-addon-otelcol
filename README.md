@@ -10,7 +10,7 @@ Home Assistant OS and sends logs, traces, metrics and profiles to any [OTLP](htt
 | Logs | `logs` | HAOS systemd journal: host services, kernel, Supervisor, Core and every add-on |
 | Traces | `ha_traces` | Automation and script runs, one trace per run ([Home Assistant receiver](otelcol/collector/receiver/homeassistantreceiver)) |
 | Metrics | `ha_metrics` | Home Assistant `/api/prometheus`, through the Supervisor proxy |
-| Metrics | `host_metrics` | Host CPU, memory, load, paging, network and uptime (`system.*`) |
+| Metrics | `host_metrics` | Host CPU, memory, load, paging, network, data disk and uptime (`system.*`) |
 | Profiles | `profiles` | Experimental: Home Assistant's Python threads, sampled by a bundled integration |
 
 Runs on `amd64` and `aarch64` (for example a Raspberry Pi running 64-bit Home Assistant OS).

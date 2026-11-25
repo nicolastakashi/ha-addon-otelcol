@@ -22,7 +22,7 @@ import (
 const sampleTrace = `{
   "domain": "automation", "item_id": "1791864237116", "run_id": "r2",
   "state": "stopped", "script_execution": "finished",
-  "trigger": "time pattern",
+  "trigger": "time pattern", "last_step": "action/2",
   "timestamp": {"start": "2026-11-24T21:05:00.100000+00:00", "finish": "2026-11-24T21:05:00.400000+00:00"},
   "context": {"id": "01KAV3RQ5Y2G3H4J5K6M7N8P9Q", "parent_id": null, "user_id": null},
   "config": {
@@ -38,7 +38,7 @@ const sampleTrace = `{
     "trigger/0": [{"path": "trigger/0", "timestamp": "2026-11-24T21:05:00.100000+00:00"}],
     "action/0": [{"path": "action/0", "timestamp": "2026-11-24T21:05:00.150000+00:00"}],
     "action/1": [{"path": "action/1", "timestamp": "2026-11-24T21:05:00.180000+00:00"}],
-    "action/1/if": [{"path": "action/1/if", "timestamp": "2026-11-24T21:05:00.190000+00:00"}],
+    "action/1/if": [{"path": "action/1/if", "timestamp": "2026-11-24T21:05:00.190000+00:00", "result": {"result": false, "params": {"x": 1}}}],
     "action/1/if/condition/0": [{"path": "action/1/if/condition/0", "timestamp": "2026-11-24T21:05:00.200000+00:00", "error": "boom"}],
     "action/2": [{"path": "action/2", "timestamp": "2026-11-24T21:05:00.300000+00:00",
                   "child_id": {"domain": "script", "item_id": "x", "run_id": "c1"}}]
@@ -93,6 +93,15 @@ func TestToTraces(t *testing.T) {
 	}
 	if spans.At(5).Status().Code() != ptrace.StatusCodeError || spans.At(5).Status().Message() != "boom" {
 		t.Errorf("step error not mapped")
+	}
+	if v, ok := spans.At(4).Attributes().Get("homeassistant.step.result.result"); !ok || v.Bool() {
+		t.Error("if step: want homeassistant.step.result.result=false")
+	}
+	if _, ok := spans.At(4).Attributes().Get("homeassistant.step.result.params"); ok {
+		t.Error("nested result values must be skipped")
+	}
+	if v, _ := root.Attributes().Get("homeassistant.last_step"); v.Str() != "action/2" {
+		t.Errorf("last_step %q", v.Str())
 	}
 	if v, _ := spans.At(6).Attributes().Get("homeassistant.step.child"); v.Str() != "script.x/c1" {
 		t.Errorf("child link %q", v.Str())

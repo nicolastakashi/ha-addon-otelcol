@@ -34,33 +34,45 @@ export OTLP_ENDPOINT SERVICE_NAME DEPLOYMENT_ENVIRONMENT SCRAPE_INTERVAL \
 
 mkdir -p /data/storage
 
-# Real host name of the HAOS machine (the container hostname is the add-on slug).
+# Real host name of the HAOS machine (the container hostname is the add-on slug), plus the
+# Home Assistant, OS and architecture versions for the resource attributes.
 # The token goes through a header file, so it never shows up in the process list.
-host_name=""
+host_name=""; ha_version=""; os_description=""; arch=""
 if [ -n "$SUPERVISOR_TOKEN" ]; then
   umask 077
   printf 'Authorization: Bearer %s\n' "$SUPERVISOR_TOKEN" > /tmp/supervisor.hdr
-  host_name="$(curl -fsS --max-time 5 -H @/tmp/supervisor.hdr http://supervisor/host/info 2>/dev/null \
-    | jq -r '.data.hostname // empty' || true)"
+  sup() { curl -fsS --max-time 5 -H @/tmp/supervisor.hdr "http://supervisor/$1" 2>/dev/null | jq -r "$2 // empty" || true; }
+  host_name="$(sup host/info .data.hostname)"
+  os_description="$(sup host/info .data.operating_system)"
+  ha_version="$(sup core/info .data.version)"
+  arch="$(sup info .data.arch)"
   rm -f /tmp/supervisor.hdr
 else
   echo "[otelcol] WARNING: no SUPERVISOR_TOKEN; host.name falls back to 'homeassistant' and ha_metrics will get 401." >&2
 fi
 HOST_NAME="${host_name:-homeassistant}"
 export HOST_NAME
+# Supervisor architecture names -> semconv host.arch values.
+case "$arch" in
+  aarch64) arch=arm64 ;; amd64) arch=amd64 ;; armv7|armhf) arch=arm32 ;; i386) arch=x86 ;;
+esac
 
 # Generated fragment: resource attributes and exporter headers.
 # Lists are replaced (not merged) across --config files, so the whole
 # resource processor is built here. JSON is valid YAML.
 # "$" is doubled because the collector expands ${...} in config values.
-jq --arg host "$HOST_NAME" '
+jq --arg host "$HOST_NAME" --arg ver "$ha_version" --arg os "$os_description" --arg arch "$arch" '
   def esc: tostring | gsub("\\$"; "$$");
   def attr(k; v): {key: k, value: (v | esc), action: "upsert"};
   {
     processors: {resource: {attributes: (
       [ attr("service.name"; .service_name),
         attr("deployment.environment.name"; .deployment_environment),
-        attr("host.name"; $host) ]
+        attr("host.name"; $host),
+        attr("os.type"; "linux") ]
+      + (if $ver != "" then [attr("service.version"; $ver)] else [] end)
+      + (if $os != "" then [attr("os.description"; $os)] else [] end)
+      + (if $arch != "" then [attr("host.arch"; $arch)] else [] end)
       + (if (.service_instance_id // "") != "" then [attr("service.instance.id"; .service_instance_id)] else [] end)
       + ((.resource_attributes // []) | map(attr(.name; .value)))
     )}},

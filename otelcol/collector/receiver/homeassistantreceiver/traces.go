@@ -29,6 +29,7 @@ type traceDetail struct {
 	ScriptExecution string `json:"script_execution"`
 	Error           string `json:"error"`
 	Trigger         string `json:"trigger"`
+	LastStep        string `json:"last_step"`
 	Timestamp       struct {
 		Start  time.Time `json:"start"`
 		Finish time.Time `json:"finish"`
@@ -44,9 +45,10 @@ type traceDetail struct {
 }
 
 type traceStep struct {
-	Path      string    `json:"path"`
-	Timestamp time.Time `json:"timestamp"`
-	Error     string    `json:"error"`
+	Path      string         `json:"path"`
+	Timestamp time.Time      `json:"timestamp"`
+	Error     string         `json:"error"`
+	Result    map[string]any `json:"result"`
 	ChildID   *struct {
 		Domain string `json:"domain"`
 		ItemID string `json:"item_id"`
@@ -86,6 +88,7 @@ func toTraces(d traceDetail) ptrace.Traces {
 	a.PutStr("homeassistant.run_id", d.RunID)
 	putIf(a, "homeassistant.alias", alias)
 	putIf(a, "homeassistant.trigger", d.Trigger)
+	putIf(a, "homeassistant.last_step", d.LastStep)
 	putIf(a, "homeassistant.script_execution", d.ScriptExecution)
 	putIf(a, "homeassistant.context.id", d.Context.ID)
 	putIf(a, "homeassistant.context.parent_id", d.Context.ParentID)
@@ -139,6 +142,7 @@ func toTraces(d traceDetail) ptrace.Traces {
 		sp.SetStartTimestamp(pcommon.NewTimestampFromTime(s.Timestamp))
 		sp.SetEndTimestamp(pcommon.NewTimestampFromTime(end))
 		sp.Attributes().PutStr("homeassistant.step.path", s.Path)
+		putResult(sp.Attributes(), s.Result)
 		if s.ChildID != nil {
 			sp.Attributes().PutStr("homeassistant.step.child", s.ChildID.Domain+"."+s.ChildID.ItemID+"/"+s.ChildID.RunID)
 		}
@@ -148,6 +152,23 @@ func toTraces(d traceDetail) ptrace.Traces {
 		}
 	}
 	return td
+}
+
+// putResult keeps the scalar values of a step result (a condition's "result", an action's
+// "running_script"...) as homeassistant.step.result.<key>; nested maps such as service
+// params are skipped to keep spans small.
+func putResult(a pcommon.Map, result map[string]any) {
+	for k, v := range result {
+		key := "homeassistant.step.result." + k
+		switch v := v.(type) {
+		case bool:
+			a.PutBool(key, v)
+		case float64:
+			a.PutDouble(key, v)
+		case string:
+			a.PutStr(key, v)
+		}
+	}
 }
 
 // stepName names a step after the last part of its path plus its index, and what it does

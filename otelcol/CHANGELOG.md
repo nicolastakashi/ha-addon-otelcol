@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.0
+
+### Added
+
+- Logs: a Python traceback from a container arrives as one record instead of one per line
+- Resource attributes `service.version` (Home Assistant Core), `os.type`, `os.description`
+  and `host.arch`
+- Host metrics: disk usage of the data partition (`system.filesystem.*`, mount point `/data`)
+- Automation traces: `homeassistant.last_step` on the run, `homeassistant.step.result.*` on
+  steps
+
 ## 0.6.1
 
 ### Changed

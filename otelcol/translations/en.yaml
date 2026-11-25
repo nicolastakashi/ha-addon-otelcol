@@ -37,7 +37,7 @@ configuration:
     description: Send every finished automation and script run as a trace, one span per step.
   host_metrics:
     name: Host metrics
-    description: CPU, memory, load, paging, network and uptime of the machine.
+    description: CPU, memory, load, paging, network, data disk and uptime of the machine.
   profiles:
     name: Profiles (experimental)
     description: Install the bundled OTel Profiler integration and send profiles of Home Assistant. Restart Home Assistant once after enabling. Needs a backend that accepts OTLP profiles.

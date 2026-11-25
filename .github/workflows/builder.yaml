@@ -41,6 +41,9 @@ jobs:
           cache-dependency-path: otelcol/collector/receiver/homeassistantreceiver/go.sum
       - run: go vet ./...
       - run: go test -race -cover ./...
+      - name: Journald traceback recombine check
+        working-directory: otelcol/tests/recombine
+        run: go test ./...
       - name: OTel Profiler integration self-check (pprof readable by go tool pprof)
         working-directory: .
         run: |

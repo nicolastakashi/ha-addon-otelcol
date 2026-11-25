@@ -136,7 +136,7 @@ scrape_interval: 60s
 | `logs_parse` | bool | `false` | Advanced. Turns JSON and Python log lines into attributes. See "Logs". |
 | `ha_traces` | bool | `true` | Send every automation and script run as a trace. |
 | `ha_metrics` | bool | `true` | Scrape Home Assistant's Prometheus endpoint. Needs the Prometheus integration. |
-| `host_metrics` | bool | `true` | Send CPU, memory, load, paging, network and uptime metrics of the machine. |
+| `host_metrics` | bool | `true` | Send CPU, memory, load, paging, network, data disk and uptime metrics of the machine. |
 | `profiles` | bool | `false` | Experimental. Send profiles of Home Assistant's Python threads. See "Profiles (experimental)". |
 | `scrape_interval` | `<n>s` or `<n>m` | `60s` | How often `ha_metrics` and `host_metrics` collect. Must be greater than zero. Traces are polled every 10 s regardless. |
 
@@ -157,7 +157,8 @@ the kernel, the Supervisor, Home Assistant Core and every add-on container.
 
 ### What a log record contains
 
-The body is the journal `MESSAGE`, with ANSI colour codes removed.
+The body is the journal `MESSAGE`, with ANSI colour codes removed. A Python traceback from
+a container arrives as one record: its lines are joined to the line that started it.
 
 For containers, the add-on reads the severity from the text. It recognises two formats:
 
@@ -240,8 +241,10 @@ message.
 | `homeassistant.script_execution` | root | How the run ended: `finished`, `failed_conditions`, `error`, `cancelled`... |
 | `homeassistant.context.id` | root | Context id of the run |
 | `homeassistant.context.parent_id` | root | Context id of the event or run that caused it |
+| `homeassistant.last_step` | root | Path of the last step the run reached |
 | `user.id` | root | Home Assistant user who started the run, when there is one |
 | `homeassistant.step.path` | step | Path of the step in the configuration, for example `action/1/if/condition/0` |
+| `homeassistant.step.result.<key>` | step | Scalar values of the step result, for example `homeassistant.step.result.result` of a condition |
 | `homeassistant.step.child` | step | Run started by the step, as `domain.item_id/run_id` |
 
 ### Trace limitations
@@ -280,9 +283,7 @@ The `host_metrics` option sends metrics of the machine that runs Home Assistant 
 | Paging | `system.paging.*` |
 | Network | `system.network.*`, except `system.network.connections` |
 | Uptime | `system.uptime` |
-
-Host disk usage is not collected: inside the add-on container the host partitions are not
-visible. Use Home Assistant's System Monitor integration for disk usage.
+| Disk | `system.filesystem.*` of the data partition (mount point `/data`) |
 
 ## Profiles (experimental)
 
@@ -351,6 +352,9 @@ Every signal carries these resource attributes:
 | `deployment.environment.name` | `deployment_environment` option |
 | `host.name` | Host name of the Home Assistant OS machine, read from the Supervisor. Falls back to `homeassistant`. |
 | `service.instance.id` | `service_instance_id` option, when set |
+| `service.version` | Home Assistant Core version, read from the Supervisor |
+| `os.type`, `os.description` | `linux` and the Home Assistant OS version, for example `Home Assistant OS 18.4` |
+| `host.arch` | Machine architecture, for example `arm64` |
 
 ### Add your own resource attributes (advanced)
 
@@ -380,6 +384,7 @@ The registry builds on semantic conventions v1.37.0.
 | `service.instance.id` | resource | all | Semconv |
 | `deployment.environment.name` | resource | all | Semconv |
 | `host.name` | resource | all | Semconv |
+| `service.version`, `os.type`, `os.description`, `host.arch` | resource | all | Semconv |
 | `container.name` | log | logs | Semconv |
 | `systemd.unit` | log | logs | Custom |
 | `syslog.identifier` | log | logs | Custom |
@@ -487,8 +492,6 @@ files, reads of the journal, `/proc` and `/sys`, and writes only to `/data`, `/t
 ## Known limitations
 
 - OTLP/HTTP only. No gRPC, no custom CA certificates.
-- Multi-line Python tracebacks arrive as one log record per line.
-- No filesystem metrics from the host.
 - Profiles are experimental and cover Python frames only.
 
 ## FAQ
