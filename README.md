@@ -54,9 +54,9 @@ OTLP profiles are alpha. Check that your backend accepts them before you enable 
 
 ## Read the full documentation
 
-- [otelcol/DOCS.md](otelcol/DOCS.md): the full manual (configuration reference, attributes,
+- [Docs](otelcol/DOCS.md): the full manual (configuration reference, attributes,
   troubleshooting). Home Assistant shows the same file on the add-on's **Documentation** tab.
-- [otelcol/CHANGELOG.md](otelcol/CHANGELOG.md)
+- [CHANGELOG](otelcol/CHANGELOG.md)
 - [Home Assistant receiver](otelcol/collector/receiver/homeassistantreceiver/README.md)
 
 ## How it works
