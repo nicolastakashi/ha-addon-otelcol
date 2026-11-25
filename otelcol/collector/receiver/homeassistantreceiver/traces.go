@@ -61,8 +61,10 @@ type traceStep struct {
 // next one starts (or when the run finishes).
 func toTraces(d traceDetail) ptrace.Traces {
 	td := ptrace.NewTraces()
-	ss := td.ResourceSpans().AppendEmpty().ScopeSpans().AppendEmpty()
-	ss.Scope().SetName("github.com/nicolastakashi/ha-addon-otelcol/homeassistantreceiver")
+	rs := td.ResourceSpans().AppendEmpty()
+	rs.Resource().Attributes().PutStr("container.name", "homeassistant") // runs happen in Core
+	ss := rs.ScopeSpans().AppendEmpty()
+	ss.Scope().SetName(scopeName)
 
 	start, finish := d.Timestamp.Start, d.Timestamp.Finish
 	if finish.Before(start) {

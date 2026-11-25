@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.13.0
+
+### Changed
+
+- `container.name` is a resource attribute, as the semantic conventions define it: one
+  resource per container for journal logs and container metrics, and
+  `container.name=homeassistant` on Core logs, event logs, entity metrics and automation
+  traces. Backends no longer mix it across records that share a resource
+
 ## 0.12.1
 
 ### Fixed

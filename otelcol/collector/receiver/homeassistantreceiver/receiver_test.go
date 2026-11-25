@@ -314,15 +314,22 @@ func TestStatsReceiver(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ms := md.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics()
-	if ms.At(0).Name() != "container.cpu.usage" || ms.At(0).Gauge().DataPoints().Len() != 3 {
-		t.Fatalf("want cpu for core, supervisor and the started add-on, got %d", ms.At(0).Gauge().DataPoints().Len())
+	rms := md.ResourceMetrics()
+	if rms.Len() != 3 {
+		t.Fatalf("want a resource each for core, supervisor and the started add-on, got %d", rms.Len())
 	}
-	dp := ms.At(0).Gauge().DataPoints().At(2)
-	if v, _ := dp.Attributes().Get("container.name"); v.Str() != "addon_core_ssh" || dp.DoubleValue() != 1.5 {
-		t.Errorf("add-on cpu point: %s %v", v.Str(), dp.DoubleValue())
+	rm := rms.At(2)
+	if v, _ := rm.Resource().Attributes().Get("container.name"); v.Str() != "addon_core_ssh" {
+		t.Errorf("resource container.name = %q", v.Str())
 	}
-	if n := ms.At(3).Sum().DataPoints().Len(); ms.At(3).Name() != "container.network.io" || n != 6 {
+	ms := rm.ScopeMetrics().At(0).Metrics()
+	if ms.At(0).Name() != "container.cpu.usage" || ms.At(0).Gauge().DataPoints().At(0).DoubleValue() != 1.5 {
+		t.Errorf("cpu: %s %v", ms.At(0).Name(), ms.At(0).Gauge().DataPoints().At(0).DoubleValue())
+	}
+	if _, ok := ms.At(0).Gauge().DataPoints().At(0).Attributes().Get("container.name"); ok {
+		t.Error("container.name belongs on the resource, not the data point")
+	}
+	if n := ms.At(3).Sum().DataPoints().Len(); ms.At(3).Name() != "container.network.io" || n != 2 {
 		t.Errorf("network.io points: %d", n)
 	}
 }
@@ -402,6 +409,9 @@ func TestEventsReceiver(t *testing.T) {
 		t.Fatalf("want 1 record, got %d", n)
 	}
 	lr := sink.AllLogs()[0].ResourceLogs().At(0).ScopeLogs().At(0).LogRecords().At(0)
+	if v, _ := sink.AllLogs()[0].ResourceLogs().At(0).Resource().Attributes().Get("container.name"); v.Str() != "homeassistant" {
+		t.Errorf("event resource container.name = %q", v.Str())
+	}
 	if lr.Body().Type() != pcommon.ValueTypeEmpty {
 		t.Error("events carry no body")
 	}

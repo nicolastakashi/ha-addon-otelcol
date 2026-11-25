@@ -46,7 +46,7 @@ groups:
       - ref: container.name
         requirement_level:
           conditionally_required: When the entry comes from a container.
-        brief: Docker container that wrote the entry.
+        brief: Docker container that wrote the entry (on the resource).
         examples: [homeassistant, hassio_supervisor, addon_core_ssh]
       - ref: thread.name
         requirement_level:

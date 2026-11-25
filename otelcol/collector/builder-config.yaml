@@ -4,7 +4,7 @@ dist:
   name: otelcol-ha
   description: OTel Collector for Home Assistant (community build)
   output_path: ./_build
-  version: 0.12.1
+  version: 0.13.0
 
 receivers:
   - gomod: github.com/nicolastakashi/ha-addon-otelcol/otelcol/collector/receiver/homeassistantreceiver v0.0.0
@@ -20,6 +20,7 @@ processors:
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor v0.165.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.165.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.165.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/groupbyattrsprocessor v0.165.0
 
 exporters:
   - gomod: go.opentelemetry.io/collector/exporter/otlphttpexporter v0.165.0

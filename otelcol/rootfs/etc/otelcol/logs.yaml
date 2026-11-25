@@ -21,7 +21,7 @@ processors:
           - set(attributes["systemd.unit"], body["_SYSTEMD_UNIT"]) where IsMap(body) and body["_SYSTEMD_UNIT"] != nil
           - set(attributes["syslog.identifier"], body["SYSLOG_IDENTIFIER"]) where IsMap(body) and body["SYSLOG_IDENTIFIER"] != nil
           - set(attributes["journald.boot_id"], body["_BOOT_ID"]) where IsMap(body) and body["_BOOT_ID"] != nil
-          # Log attribute, not resource: everything stays one service resource.
+          # Moved to the resource by groupbyattrs/container below (semconv: resource attribute).
           - set(attributes["container.name"], cache["container"]) where cache["container"] != nil
           - set(body, body["MESSAGE"]) where IsMap(body) and body["MESSAGE"] != nil
           - replace_pattern(body, "\\x1b\\[[0-9;]*m", "") where IsString(body)
@@ -52,6 +52,10 @@ processors:
           - set(severity_text, "ERROR") where severity_number >= SEVERITY_NUMBER_ERROR and severity_number < SEVERITY_NUMBER_FATAL
           - set(severity_text, "FATAL") where severity_number >= SEVERITY_NUMBER_FATAL
 
+  # One resource per container: container.name is a resource attribute in semconv.
+  groupbyattrs/container:
+    keys: [container.name]
+
   filter/drop:
     error_mode: ignore
     logs:
@@ -74,5 +78,5 @@ service:
     logs:
       receivers: [journald]
       # Keep in sync with logs_parse.yaml, which replaces this list.
-      processors: [transform/journald, filter/drop, resource]
+      processors: [transform/journald, filter/drop, groupbyattrs/container, resource]
       exporters: [otlp_http]

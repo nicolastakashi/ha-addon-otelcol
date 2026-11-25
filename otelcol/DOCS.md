@@ -191,13 +191,14 @@ the severity comes from the journal priority:
 
 | Attribute | When | Example |
 |---|---|---|
-| `container.name` | The entry comes from a container | `homeassistant`, `hassio_supervisor`, `addon_core_ssh` |
 | `systemd.unit` | The journal has `_SYSTEMD_UNIT` | `docker.service` |
 | `syslog.identifier` | The journal has `SYSLOG_IDENTIFIER` | `kernel` |
 | `journald.boot_id` | The journal has `_BOOT_ID` | `3e1c0f6b2a9d4e8f9b7c6d5e4f3a2b1c` |
 
-`container.name` is a log attribute, not a resource attribute, so all logs share one
-resource (`service.name`).
+An entry from a container gets its own resource with `container.name` (`homeassistant`,
+`hassio_supervisor`, `addon_core_ssh`...), as the semantic conventions define it. Host
+services and the kernel keep the add-on's resource without it. Every resource has the same
+`service.name`.
 
 ### What is dropped
 
@@ -355,7 +356,7 @@ The `host_metrics` option sends metrics of the machine that runs Home Assistant 
 | Network | `system.network.*`, except `system.network.connections` |
 | Uptime | `system.uptime` |
 | Disk | `system.filesystem.*` of the data partition (mount point `/data`) |
-| Containers (`container_metrics`) | `container.cpu.usage`, `container.memory.usage`, `container.disk.io`, `container.network.io` of Home Assistant Core, the Supervisor and every started add-on, labelled with `container.name` |
+| Containers (`container_metrics`) | `container.cpu.usage`, `container.memory.usage`, `container.disk.io`, `container.network.io` of Home Assistant Core, the Supervisor and every started add-on, one resource per container with `container.name` |
 
 ## Profiles (experimental)
 
@@ -457,7 +458,7 @@ The registry builds on semantic conventions v1.37.0.
 | `deployment.environment.name` | resource | all | Semconv |
 | `host.name` | resource | all | Semconv |
 | `service.version`, `os.type`, `os.description`, `host.arch` | resource | all | Semconv |
-| `container.name` | log, metric | logs, host metrics | Semconv |
+| `container.name` | resource | container logs and metrics; `homeassistant` on Core logs, events, entity metrics and traces | Semconv |
 | `systemd.unit` | log | logs | Custom |
 | `syslog.identifier` | log | logs | Custom |
 | `journald.boot_id` | log | logs | Custom |

@@ -34,4 +34,4 @@ service:
     logs:
       # Replaces the list in logs.yaml (keep the two in sync).
       # filter/drop after parsing, so a line whose parsed message is empty is dropped too.
-      processors: [transform/journald, transform/parse, filter/drop, resource]
+      processors: [transform/journald, transform/parse, filter/drop, groupbyattrs/container, resource]

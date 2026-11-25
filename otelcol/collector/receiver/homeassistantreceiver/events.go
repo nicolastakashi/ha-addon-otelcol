@@ -109,8 +109,10 @@ func (r *eventsReceiver) listen(ctx context.Context) error {
 
 func toLogs(ev haEvent) plog.Logs {
 	ld := plog.NewLogs()
-	sl := ld.ResourceLogs().AppendEmpty().ScopeLogs().AppendEmpty()
-	sl.Scope().SetName("github.com/nicolastakashi/ha-addon-otelcol/homeassistantreceiver")
+	rl := ld.ResourceLogs().AppendEmpty()
+	rl.Resource().Attributes().PutStr("container.name", "homeassistant") // events come from Core
+	sl := rl.ScopeLogs().AppendEmpty()
+	sl.Scope().SetName(scopeName)
 	lr := sl.LogRecords().AppendEmpty()
 	lr.SetTimestamp(pcommon.NewTimestampFromTime(ev.TimeFired))
 	lr.SetObservedTimestamp(pcommon.NewTimestampFromTime(time.Now()))

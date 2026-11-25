@@ -9,6 +9,10 @@ receivers:
         endpoint: 127.0.0.1:4318
 
 processors:
+  # The records come from Home Assistant Core.
+  resource/core:
+    attributes:
+      - {key: container.name, value: homeassistant, action: upsert}
   filter/core_logs:
     error_mode: ignore
     logs:
@@ -19,5 +23,5 @@ service:
   pipelines:
     logs/core:
       receivers: [otlp/local]
-      processors: [filter/core_logs, resource]
+      processors: [filter/core_logs, resource/core, resource]
       exporters: [otlp_http]

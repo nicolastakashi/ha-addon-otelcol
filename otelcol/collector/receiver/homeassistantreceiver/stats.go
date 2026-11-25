@@ -100,26 +100,37 @@ func (r *statsReceiver) get(ctx context.Context, path string, out any) error {
 	}{out})
 }
 
+const scopeName = "github.com/nicolastakashi/ha-addon-otelcol/homeassistantreceiver"
+
+// containerScope appends a resource for one container (semconv: container.name is a
+// resource attribute) and returns its metric slice.
+func containerScope(md pmetric.Metrics, container string) pmetric.MetricSlice {
+	rm := md.ResourceMetrics().AppendEmpty()
+	rm.Resource().Attributes().PutStr("container.name", container)
+	sm := rm.ScopeMetrics().AppendEmpty()
+	sm.Scope().SetName(scopeName)
+	return sm.Metrics()
+}
+
 func (r *statsReceiver) scrape(ctx context.Context) (pmetric.Metrics, error) {
 	md := pmetric.NewMetrics()
-	sm := md.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty()
-	sm.Scope().SetName("github.com/nicolastakashi/ha-addon-otelcol/homeassistantreceiver")
 	now := pcommon.NewTimestampFromTime(time.Now())
 	var errs []error
 	if r.cfg.Containers {
-		if err := r.containerMetrics(ctx, sm.Metrics(), now); err != nil {
+		if err := r.containerMetrics(ctx, md, now); err != nil {
 			errs = append(errs, fmt.Errorf("container metrics: %w", err))
 		}
 	}
 	if r.cfg.Entities {
-		if err := r.entityMetrics(ctx, sm.Metrics(), now); err != nil {
+		// Entity states come from Home Assistant Core.
+		if err := r.entityMetrics(ctx, containerScope(md, "homeassistant"), now); err != nil {
 			errs = append(errs, fmt.Errorf("entity metrics: %w", err))
 		}
 	}
 	return md, errors.Join(errs...)
 }
 
-func (r *statsReceiver) containerMetrics(ctx context.Context, ms pmetric.MetricSlice, now pcommon.Timestamp) error {
+func (r *statsReceiver) containerMetrics(ctx context.Context, md pmetric.Metrics, now pcommon.Timestamp) error {
 	targets := []struct{ name, path string }{
 		{"homeassistant", "/core/stats"},
 		{"hassio_supervisor", "/supervisor/stats"},
@@ -139,23 +150,22 @@ func (r *statsReceiver) containerMetrics(ctx context.Context, ms pmetric.MetricS
 		}
 	}
 
-	cpu := gauge(ms, "container.cpu.usage", "{cpu}", "CPU used by the container, in CPUs.")
-	// ponytail: semconv calls container.memory.usage a counter; memory goes down, so a gauge.
-	mem := gauge(ms, "container.memory.usage", "By", "Memory used by the container.")
-	disk := counter(ms, "container.disk.io", "By", "Disk bytes read and written by the container.")
-	net := counter(ms, "container.network.io", "By", "Network bytes received and sent by the container.")
 	for _, t := range targets {
 		var s containerStats
 		if err := r.get(ctx, t.path, &s); err != nil {
 			r.logger.Debug("Skipping container stats", zap.String("container", t.name), zap.Error(err))
 			continue
 		}
-		point(cpu.Gauge().DataPoints(), now, 0, t.name).SetDoubleValue(s.CPUPercent / 100)
-		point(mem.Gauge().DataPoints(), now, 0, t.name).SetIntValue(s.MemoryUsage)
-		dir(point(disk.Sum().DataPoints(), now, r.start, t.name), "disk.io.direction", "read").SetIntValue(s.BlkRead)
-		dir(point(disk.Sum().DataPoints(), now, r.start, t.name), "disk.io.direction", "write").SetIntValue(s.BlkWrite)
-		dir(point(net.Sum().DataPoints(), now, r.start, t.name), "network.io.direction", "receive").SetIntValue(s.NetworkRx)
-		dir(point(net.Sum().DataPoints(), now, r.start, t.name), "network.io.direction", "transmit").SetIntValue(s.NetworkTx)
+		ms := containerScope(md, t.name)
+		point(gauge(ms, "container.cpu.usage", "{cpu}", "CPU used by the container, in CPUs.").Gauge().DataPoints(), now, 0).SetDoubleValue(s.CPUPercent / 100)
+		// ponytail: semconv calls container.memory.usage a counter; memory goes down, so a gauge.
+		point(gauge(ms, "container.memory.usage", "By", "Memory used by the container.").Gauge().DataPoints(), now, 0).SetIntValue(s.MemoryUsage)
+		disk := counter(ms, "container.disk.io", "By", "Disk bytes read and written by the container.").Sum().DataPoints()
+		dir(point(disk, now, r.start), "disk.io.direction", "read").SetIntValue(s.BlkRead)
+		dir(point(disk, now, r.start), "disk.io.direction", "write").SetIntValue(s.BlkWrite)
+		net := counter(ms, "container.network.io", "By", "Network bytes received and sent by the container.").Sum().DataPoints()
+		dir(point(net, now, r.start), "network.io.direction", "receive").SetIntValue(s.NetworkRx)
+		dir(point(net, now, r.start), "network.io.direction", "transmit").SetIntValue(s.NetworkTx)
 	}
 	return nil
 }
@@ -180,13 +190,12 @@ func counter(ms pmetric.MetricSlice, name, unit, desc string) pmetric.Metric {
 	return m
 }
 
-func point(dps pmetric.NumberDataPointSlice, now, start pcommon.Timestamp, container string) pmetric.NumberDataPoint {
+func point(dps pmetric.NumberDataPointSlice, now, start pcommon.Timestamp) pmetric.NumberDataPoint {
 	dp := dps.AppendEmpty()
 	dp.SetTimestamp(now)
 	if start != 0 {
 		dp.SetStartTimestamp(start)
 	}
-	dp.Attributes().PutStr("container.name", container)
 	return dp
 }
 
