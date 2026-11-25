@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.2
+
+### Fixed
+
+- `vertical_accuracy` of device trackers was still sent: the default attribute exclude list
+  now has `*_accuracy` instead of `gps_accuracy`
+
 ## 0.17.1
 
 ### Changed

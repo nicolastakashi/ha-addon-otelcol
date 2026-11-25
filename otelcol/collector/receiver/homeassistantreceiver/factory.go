@@ -53,5 +53,5 @@ func createLogs(_ context.Context, set receiver.Settings, cfg component.Config, 
 // DefaultExcludeAttributes leaves out static configuration and GPS positions (privacy).
 var DefaultExcludeAttributes = []string{
 	"supported_features", "min", "max", "min_*", "max_*", "*step", "current", "display_precision",
-	"latitude", "longitude", "altitude", "gps_accuracy", "radius",
+	"latitude", "longitude", "altitude", "*_accuracy", "radius",
 }

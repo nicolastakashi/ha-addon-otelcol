@@ -127,7 +127,7 @@ host_metrics: true
 container_metrics: true
 entity_metrics: true
 entity_metrics_attributes: true
-entity_metrics_attribute_exclude: [supported_features, min, max, min_*, max_*, '*step', current, display_precision, latitude, longitude, altitude, gps_accuracy, radius]
+entity_metrics_attribute_exclude: [supported_features, min, max, min_*, max_*, '*step', current, display_precision, latitude, longitude, altitude, '*_accuracy', radius]
 entity_metrics_exclude: []
 event_logs: true
 event_logs_exclude: [state_changed]

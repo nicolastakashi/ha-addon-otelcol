@@ -200,7 +200,7 @@ func fakeHA(t *testing.T, runs *runList) *httptest.Server {
 					{"entity_id": "sensor.sala_temp", "state": "21.5", "last_updated": "2026-11-25T10:00:00+00:00", "attributes": {"device_class": "temperature", "unit_of_measurement": "°C", "friendly_name": "Sala"}},
 					{"entity_id": "switch.bomba", "state": "on", "attributes": {}},
 					{"entity_id": "climate.sala", "state": "heat", "attributes": {"current_temperature": 21.5, "min_temp": 7, "max": 30, "supported_features": 17, "hvac_action": "heating"}},
-					{"entity_id": "person.ana", "state": "not_home", "attributes": {"latitude": 38.7, "longitude": -9.1}},
+					{"entity_id": "person.ana", "state": "not_home", "attributes": {"latitude": 38.7, "longitude": -9.1, "vertical_accuracy": 3}},
 					{"entity_id": "input_text.nota", "state": "texto livre", "attributes": {}},
 					{"entity_id": "sensor.last_boot", "state": "2026-11-26T00:21:27+00:00", "attributes": {"device_class": "timestamp"}},
 					{"entity_id": "sensor.texto", "state": "abc", "attributes": {}},
@@ -392,7 +392,8 @@ func TestEntityMetrics(t *testing.T) {
 		t.Error("numeric attribute current_temperature missing")
 	}
 	for _, static := range []string{"homeassistant.climate.attribute.min_temp", "homeassistant.climate.attribute.max",
-		"homeassistant.climate.attribute.supported_features", "homeassistant.person.attribute.latitude"} {
+		"homeassistant.climate.attribute.supported_features", "homeassistant.person.attribute.latitude",
+		"homeassistant.person.attribute.vertical_accuracy"} {
 		if _, ok := got[static]; ok {
 			t.Errorf("static attribute %s must be skipped", static)
 		}
