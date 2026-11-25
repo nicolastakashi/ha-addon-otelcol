@@ -4,6 +4,8 @@
 
 ### Fixed
 
+- Bundled integrations: the add-on could report "set up" before Home Assistant was
+  restarted and never create the config entry
 - Logs: no "entry does not contain the combine_field" errors for journal entries without a
   message
 

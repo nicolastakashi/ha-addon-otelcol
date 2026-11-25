@@ -135,10 +135,12 @@ install_integration() {
       \"message\": \"The $2 integration was installed or updated ($3). Restart Home Assistant to load it.\"}" \
       >/dev/null 2>&1 || true
   fi
-  # create_entry on the first success, abort ("already configured") afterwards; until Core
-  # has loaded the integration the flow fails and we retry.
+  # create_entry on the first success, abort "single_instance_allowed" afterwards. Until Core
+  # has loaded the integration the flow fails or aborts for another reason; retry.
   ( until core_post config/config_entries/flow "{\"handler\": \"$1\"}" 2>/dev/null \
-        | jq -e '.type == "create_entry" or .type == "abort"' >/dev/null 2>&1; do sleep 30; done
+        | jq -e '.type == "create_entry" or (.type == "abort" and
+                 (.reason == "single_instance_allowed" or .reason == "already_configured"))' \
+        >/dev/null 2>&1; do sleep 30; done
     echo "[otelcol] $2 integration is set up." ) &
 }
 # remove_hint <domain> <name> <option>: the option is off but the integration is installed.
