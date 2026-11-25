@@ -19,14 +19,17 @@ Runs on `amd64` and `aarch64` (for example a Raspberry Pi running 64-bit Home As
 
 [![Open your Home Assistant instance and show the add add-on repository dialog with this repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fnicolastakashi%2Fha-addon-otelcol)
 
-1. Add this repository: click the badge above, or go to **Settings → Add-ons → Add-on
-   store → ⋮ → Repositories** and add `https://github.com/nicolastakashi/ha-addon-otelcol`.
-   Recent Home Assistant releases label this menu **Apps**.
+1. Click the badge above to add this repository.
 2. Install **OTel Collector (community)**.
-3. On the **Configuration** tab, set `otlp_endpoint` and, if your backend needs it, an
-   auth header in `otlp_headers`.
-4. Start the add-on. The **Log** tab shows a line like
-   `[otelcol] host.name=homeassistant, exporting to https://otlp.example.com: logs ha_metrics ha_traces host_metrics`.
+3. Set `otlp_endpoint` and `otlp_headers` (see below).
+4. Start the add-on.
+
+Without the badge, add the repository URL in **Settings → Add-ons → Add-on store → ⋮ →
+Repositories**:
+
+```text
+https://github.com/nicolastakashi/ha-addon-otelcol
+```
 
 For `ha_metrics`, also enable the
 [Prometheus integration](https://www.home-assistant.io/integrations/prometheus/) in Home
