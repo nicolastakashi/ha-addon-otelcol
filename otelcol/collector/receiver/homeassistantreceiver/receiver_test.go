@@ -25,10 +25,20 @@ const sampleTrace = `{
   "trigger": "time pattern",
   "timestamp": {"start": "2026-11-24T21:05:00.100000+00:00", "finish": "2026-11-24T21:05:00.400000+00:00"},
   "context": {"id": "01KAV3RQ5Y2G3H4J5K6M7N8P9Q", "parent_id": null, "user_id": null},
-  "config": {"alias": "Cilindro gestao inteligente"},
+  "config": {
+    "alias": "Cilindro gestao inteligente",
+    "triggers": [{"trigger": "time_pattern", "minutes": "/5"}],
+    "actions": [
+      {"alias": "Ligar resistencia", "action": "switch.turn_on"},
+      {"if": [{"condition": "state", "entity_id": "input_boolean.x", "state": "on"}], "then": []},
+      {"action": "script.x"}
+    ]
+  },
   "trace": {
     "trigger/0": [{"path": "trigger/0", "timestamp": "2026-11-24T21:05:00.100000+00:00"}],
     "action/0": [{"path": "action/0", "timestamp": "2026-11-24T21:05:00.150000+00:00"}],
+    "action/1": [{"path": "action/1", "timestamp": "2026-11-24T21:05:00.180000+00:00"}],
+    "action/1/if": [{"path": "action/1/if", "timestamp": "2026-11-24T21:05:00.190000+00:00"}],
     "action/1/if/condition/0": [{"path": "action/1/if/condition/0", "timestamp": "2026-11-24T21:05:00.200000+00:00", "error": "boom"}],
     "action/2": [{"path": "action/2", "timestamp": "2026-11-24T21:05:00.300000+00:00",
                   "child_id": {"domain": "script", "item_id": "x", "run_id": "c1"}}]
@@ -41,8 +51,8 @@ func TestToTraces(t *testing.T) {
 		t.Fatal(err)
 	}
 	spans := toTraces(d).ResourceSpans().At(0).ScopeSpans().At(0).Spans()
-	if spans.Len() != 5 {
-		t.Fatalf("want root + 4 steps, got %d", spans.Len())
+	if spans.Len() != 7 {
+		t.Fatalf("want root + 6 steps, got %d", spans.Len())
 	}
 	root := spans.At(0)
 	if root.Name() != "automation Cilindro gestao inteligente" {
@@ -55,28 +65,58 @@ func TestToTraces(t *testing.T) {
 	if root.TraceID() != want {
 		t.Errorf("trace id not derived from the context ULID")
 	}
-	names := []string{"trigger", "action", "action if condition", "action"}
-	for i := 1; i < spans.Len(); i++ {
-		s := spans.At(i)
-		if s.ParentSpanID() != root.SpanID() || s.TraceID() != root.TraceID() {
-			t.Errorf("step %d not a child of root", i)
+	// name, parent index, end (ms after 21:05:00)
+	steps := []struct {
+		name   string
+		parent int
+		endMs  int
+	}{
+		{"trigger 0: time_pattern", 0, 150},
+		{"action 0: Ligar resistencia", 0, 180},
+		{"action 1", 0, 300},
+		{"if", 3, 300},
+		{"condition 0: state", 4, 300},
+		{"action 2: script.x", 0, 400},
+	}
+	base := time.Date(2026, 11, 24, 21, 5, 0, 0, time.UTC)
+	for i, w := range steps {
+		s := spans.At(i + 1)
+		if s.Name() != w.name {
+			t.Errorf("step %d name %q, want %q", i+1, s.Name(), w.name)
 		}
-		if s.Name() != names[i-1] {
-			t.Errorf("step %d name %q, want %q", i, s.Name(), names[i-1])
+		if s.ParentSpanID() != spans.At(w.parent).SpanID() || s.TraceID() != root.TraceID() {
+			t.Errorf("step %q: wrong parent", w.name)
+		}
+		if e := s.EndTimestamp().AsTime(); !e.Equal(base.Add(time.Duration(w.endMs) * time.Millisecond)) {
+			t.Errorf("step %q ends at %v", w.name, e)
 		}
 	}
-	// A step ends when the next one starts; the last ends with the run.
-	if e := spans.At(1).EndTimestamp().AsTime(); !e.Equal(spans.At(2).StartTimestamp().AsTime()) {
-		t.Errorf("step end %v", e)
-	}
-	if !spans.At(4).EndTimestamp().AsTime().Equal(root.EndTimestamp().AsTime()) {
-		t.Errorf("last step must end with the run")
-	}
-	if spans.At(3).Status().Code() != ptrace.StatusCodeError || spans.At(3).Status().Message() != "boom" {
+	if spans.At(5).Status().Code() != ptrace.StatusCodeError || spans.At(5).Status().Message() != "boom" {
 		t.Errorf("step error not mapped")
 	}
-	if v, _ := spans.At(4).Attributes().Get("homeassistant.step.child"); v.Str() != "script.x/c1" {
+	if v, _ := spans.At(6).Attributes().Get("homeassistant.step.child"); v.Str() != "script.x/c1" {
 		t.Errorf("child link %q", v.Str())
+	}
+}
+
+func TestStepName(t *testing.T) {
+	var cfg map[string]any
+	_ = json.Unmarshal([]byte(`{"actions": [{"choose": [{"alias": "Sol forte", "conditions": [
+		{"condition": "numeric_state", "entity_id": "sensor.solar"},
+		{"condition": "state", "entity_id": ["switch.a", "switch.b"]}]}]}]}`), &cfg)
+	for path, want := range map[string]string{
+		"action/0/choose/0":                          "choose 0: Sol forte",
+		"action/0/choose/0/conditions/0":             "conditions 0: numeric_state",
+		"action/0/choose/0/conditions/0/entity_id/0": "entity_id 0: sensor.solar",
+		"action/0/choose/0/conditions/1/entity_id/1": "entity_id 1: switch.b",
+		"action/0/choose/9":                          "choose 9",
+	} {
+		if got := stepName(path, cfg); got != want {
+			t.Errorf("%s: got %q, want %q", path, got, want)
+		}
+	}
+	if got := stepName("action/0/choose/1/sequence/0", nil); got != "sequence 0" {
+		t.Errorf("no config: got %q", got)
 	}
 }
 

@@ -93,8 +93,10 @@ Traces) over the WebSocket API and turns each finished run into a trace:
 
 - Root span `automation <alias>` / `script <alias>` with the run's real start and end,
   `homeassistant.trigger`, `homeassistant.context.*` and error status.
-- One child span per step (trigger, condition, action...), named from its path. Home Assistant
-  records only when a step starts, so a step ends when the next one starts.
+- One span per step (trigger, condition, action...), nested like the automation (a condition
+  sits under its `if`/`choose`, under its action) and named from the config, e.g.
+  `action 2: Ligar resistência` or `conditions 0: state`. Home Assistant records only when a
+  step starts, so a step ends when the next step outside it starts.
 - The trace id is the run's context id (a ULID), so it can be correlated with HA logs.
 - Runs already stored when the add-on starts are not replayed.
 - Home Assistant keeps the last 5 runs per automation (`stored_traces`); more than 5 runs of

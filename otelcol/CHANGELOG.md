@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.1
+
+- Automation traces: steps nest by path (an `if` condition sits under its `if`, under its
+  action) and a step ends when the next step outside its subtree starts
+- Step span names come from the config: `action 2: Ligar resistência` (alias),
+  `action 3: switch.turn_on`, `conditions 0: state`, `entity_id 0: sensor.x`
+
 ## 0.5.0
 
 - `profiles` now produces profiles of Home Assistant: the add-on installs a bundled

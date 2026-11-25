@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"math/big"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -37,10 +38,9 @@ type traceDetail struct {
 		ParentID string `json:"parent_id"`
 		UserID   string `json:"user_id"`
 	} `json:"context"`
-	Config struct {
-		Alias string `json:"alias"`
-	} `json:"config"`
-	Trace map[string][]traceStep `json:"trace"`
+	// The automation/script config at the time of the run; steps resolve their alias here.
+	Config map[string]any         `json:"config"`
+	Trace  map[string][]traceStep `json:"trace"`
 }
 
 type traceStep struct {
@@ -71,9 +71,10 @@ func toTraces(d traceDetail) ptrace.Traces {
 	root := ss.Spans().AppendEmpty()
 	root.SetTraceID(traceID)
 	root.SetSpanID(spanIDFor(d.RunID, "root"))
+	alias, _ := d.Config["alias"].(string)
 	name := d.ItemID
-	if d.Config.Alias != "" {
-		name = d.Config.Alias
+	if alias != "" {
+		name = alias
 	}
 	root.SetName(d.Domain + " " + name)
 	root.SetKind(ptrace.SpanKindInternal)
@@ -83,7 +84,7 @@ func toTraces(d traceDetail) ptrace.Traces {
 	a.PutStr("homeassistant.domain", d.Domain)
 	a.PutStr("homeassistant.item_id", d.ItemID)
 	a.PutStr("homeassistant.run_id", d.RunID)
-	putIf(a, "homeassistant.alias", d.Config.Alias)
+	putIf(a, "homeassistant.alias", alias)
 	putIf(a, "homeassistant.trigger", d.Trigger)
 	putIf(a, "homeassistant.script_execution", d.ScriptExecution)
 	putIf(a, "homeassistant.context.id", d.Context.ID)
@@ -104,19 +105,36 @@ func toTraces(d traceDetail) ptrace.Traces {
 		}
 		return steps[i].Timestamp.Before(steps[j].Timestamp)
 	})
+	// Steps nest by path: "action/1/if/condition/0" goes under the latest "action/1/if" or
+	// "action/1" step. A step ends when the next step outside its subtree starts.
+	latest := map[string]pcommon.SpanID{}
 	for i, s := range steps {
 		end := finish
-		if i+1 < len(steps) && steps[i+1].Timestamp.After(s.Timestamp) {
-			end = steps[i+1].Timestamp
+		for _, n := range steps[i+1:] {
+			if !strings.HasPrefix(n.Path, s.Path+"/") {
+				if n.Timestamp.After(s.Timestamp) {
+					end = n.Timestamp
+				}
+				break
+			}
 		}
 		if end.Before(s.Timestamp) {
 			end = s.Timestamp
 		}
+		parent := root.SpanID()
+		for p := s.Path; strings.Contains(p, "/"); {
+			p = p[:strings.LastIndex(p, "/")]
+			if id, ok := latest[p]; ok {
+				parent = id
+				break
+			}
+		}
 		sp := ss.Spans().AppendEmpty()
 		sp.SetTraceID(traceID)
 		sp.SetSpanID(spanIDFor(d.RunID, s.Path+"#"+s.Timestamp.Format(time.RFC3339Nano)))
-		sp.SetParentSpanID(root.SpanID())
-		sp.SetName(stepName(s.Path))
+		latest[s.Path] = sp.SpanID()
+		sp.SetParentSpanID(parent)
+		sp.SetName(stepName(s.Path, d.Config))
 		sp.SetKind(ptrace.SpanKindInternal)
 		sp.SetStartTimestamp(pcommon.NewTimestampFromTime(s.Timestamp))
 		sp.SetEndTimestamp(pcommon.NewTimestampFromTime(end))
@@ -132,18 +150,73 @@ func toTraces(d traceDetail) ptrace.Traces {
 	return td
 }
 
-// stepName turns "action/0/choose/1/sequence/0" into "action choose sequence".
-func stepName(path string) string {
-	var parts []string
-	for _, p := range strings.Split(path, "/") {
-		if p != "" && (p[0] < '0' || p[0] > '9') {
-			parts = append(parts, p)
+// stepName names a step after the last part of its path plus its index, and what it does
+// when the config says: "action 2: Ligar resistência", "action 3: switch.turn_on",
+// "condition 0: state", "if".
+func stepName(path string, config map[string]any) string {
+	segs := strings.Split(path, "/")
+	kind, idx := path, ""
+	for i := len(segs) - 1; i >= 0; i-- {
+		if !isIndex(segs[i]) {
+			kind = segs[i]
+			if i+1 < len(segs) {
+				idx = " " + segs[i+1]
+			}
+			break
 		}
 	}
-	if len(parts) == 0 {
-		return path
+	name := kind + idx
+	found := lookup(config, segs)
+	if v, ok := found.(string); ok && v != "" { // e.g. entity_id/0 of a condition
+		return name + ": " + v
 	}
-	return strings.Join(parts, " ")
+	node, _ := found.(map[string]any)
+	for _, k := range []string{"alias", "action", "service", "condition", "trigger", "platform"} {
+		if v, ok := node[k].(string); ok && v != "" {
+			return name + ": " + v
+		}
+	}
+	return name
+}
+
+// lookup walks a step path through the run's config. Paths use singular keys ("action/1")
+// where the config may use plural ones ("actions"); a name segment over a list
+// ("if/condition/0", the list of if-conditions) is only a label and is skipped.
+func lookup(node any, segs []string) any {
+	for _, s := range segs {
+		switch n := node.(type) {
+		case map[string]any:
+			v, ok := n[s]
+			if !ok {
+				v, ok = n[s+"s"]
+			}
+			if !ok {
+				return nil
+			}
+			node = v
+		case []any:
+			if !isIndex(s) {
+				continue
+			}
+			i, err := strconv.Atoi(s)
+			if err != nil || i >= len(n) {
+				return nil
+			}
+			node = n[i]
+		case string: // a single value where HA accepts a list too: entity_id: x == [x]
+			if s != "0" {
+				return nil
+			}
+		default:
+			return nil
+		}
+	}
+	return node
+}
+
+func isIndex(s string) bool {
+	_, err := strconv.Atoi(s)
+	return err == nil
 }
 
 func putIf(m pcommon.Map, k, v string) {
