@@ -42,6 +42,10 @@ type traceDetail struct {
 	// The automation/script config at the time of the run; steps resolve their alias here.
 	Config map[string]any         `json:"config"`
 	Trace  map[string][]traceStep `json:"trace"`
+
+	// ChildContexts maps the run id of each script/automation a step started to that run's
+	// context id, so the step can link to the child's trace (filled by the receiver).
+	ChildContexts map[string]string `json:"-"`
 }
 
 type traceStep struct {
@@ -49,6 +53,7 @@ type traceStep struct {
 	Timestamp time.Time      `json:"timestamp"`
 	Error     string         `json:"error"`
 	Result    map[string]any `json:"result"`
+	Variables map[string]any `json:"changed_variables"`
 	ChildID   *struct {
 		Domain string `json:"domain"`
 		ItemID string `json:"item_id"`
@@ -85,19 +90,20 @@ func toTraces(d traceDetail) ptrace.Traces {
 	root.SetStartTimestamp(pcommon.NewTimestampFromTime(start))
 	root.SetEndTimestamp(pcommon.NewTimestampFromTime(finish))
 	a := root.Attributes()
-	a.PutStr("homeassistant.domain", d.Domain)
-	a.PutStr("homeassistant.item_id", d.ItemID)
-	a.PutStr("homeassistant.run_id", d.RunID)
-	putIf(a, "homeassistant.alias", alias)
-	putIf(a, "homeassistant.trigger", d.Trigger)
-	putIf(a, "homeassistant.last_step", d.LastStep)
-	putIf(a, "homeassistant.script_execution", d.ScriptExecution)
-	putIf(a, "homeassistant.context.id", d.Context.ID)
-	putIf(a, "homeassistant.context.parent_id", d.Context.ParentID)
+	a.PutStr(AttrHomeassistantDomain, d.Domain)
+	a.PutStr(AttrHomeassistantItemId, d.ItemID)
+	a.PutStr(AttrHomeassistantRunId, d.RunID)
+	putIf(a, AttrHomeassistantAlias, alias)
+	putIf(a, AttrHomeassistantTrigger, d.Trigger)
+	putIf(a, AttrHomeassistantLastStep, d.LastStep)
+	putIf(a, AttrHomeassistantScriptExecution, d.ScriptExecution)
+	putIf(a, AttrHomeassistantContextId, d.Context.ID)
+	putIf(a, AttrHomeassistantContextParentId, d.Context.ParentID)
 	putIf(a, "user.id", d.Context.UserID) // semconv user.id
 	if d.Error != "" {
 		root.Status().SetCode(ptrace.StatusCodeError)
 		root.Status().SetMessage(d.Error)
+		root.Attributes().PutStr("error.type", "_OTHER") // semconv: no error class from HA
 	}
 
 	var steps []traceStep
@@ -143,25 +149,32 @@ func toTraces(d traceDetail) ptrace.Traces {
 		sp.SetKind(ptrace.SpanKindInternal)
 		sp.SetStartTimestamp(pcommon.NewTimestampFromTime(s.Timestamp))
 		sp.SetEndTimestamp(pcommon.NewTimestampFromTime(end))
-		sp.Attributes().PutStr("homeassistant.step.path", s.Path)
-		putResult(sp.Attributes(), s.Result)
+		sp.Attributes().PutStr(AttrHomeassistantStepPath, s.Path)
+		putScalars(sp.Attributes(), AttrHomeassistantStepResult, s.Result)
+		putScalars(sp.Attributes(), AttrHomeassistantStepVariables, s.Variables)
 		if s.ChildID != nil {
-			sp.Attributes().PutStr("homeassistant.step.child", s.ChildID.Domain+"."+s.ChildID.ItemID+"/"+s.ChildID.RunID)
+			sp.Attributes().PutStr(AttrHomeassistantStepChild, s.ChildID.Domain+"."+s.ChildID.ItemID+"/"+s.ChildID.RunID)
+			if ctxID, ok := d.ChildContexts[s.ChildID.RunID]; ok {
+				l := sp.Links().AppendEmpty()
+				l.SetTraceID(traceIDFor(ctxID, s.ChildID.RunID))
+				l.SetSpanID(spanIDFor(s.ChildID.RunID, "root"))
+			}
 		}
 		if s.Error != "" {
 			sp.Status().SetCode(ptrace.StatusCodeError)
 			sp.Status().SetMessage(s.Error)
+			sp.Attributes().PutStr("error.type", "_OTHER")
 		}
 	}
 	return td
 }
 
-// putResult keeps the scalar values of a step result (a condition's "result", an action's
-// "running_script"...) as homeassistant.step.result.<key>; nested maps such as service
-// params are skipped to keep spans small.
-func putResult(a pcommon.Map, result map[string]any) {
-	for k, v := range result {
-		key := "homeassistant.step.result." + k
+// putScalars keeps the scalar values of a step's result or changed variables as
+// <prefix>.<key>; nested values (service params, the trigger object) are skipped to keep
+// spans small.
+func putScalars(a pcommon.Map, prefix string, values map[string]any) {
+	for k, v := range values {
+		key := prefix + "." + k
 		switch v := v.(type) {
 		case bool:
 			a.PutBool(key, v)

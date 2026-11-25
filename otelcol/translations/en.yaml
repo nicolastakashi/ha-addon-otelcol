@@ -56,6 +56,9 @@ configuration:
   entity_metrics:
     name: Entity metrics
     description: Every entity state as a metric, with device, area and floor. No Prometheus integration needed.
+  entity_metrics_attributes:
+    name: Entity attribute metrics
+    description: Also send numeric entity attributes (current temperature, brightness, battery level...) as metrics.
   entity_metrics_exclude:
     name: Excluded entities
     description: Entity ids to leave out of entity metrics. Wildcards work, e.g. sensor.*_linkquality.

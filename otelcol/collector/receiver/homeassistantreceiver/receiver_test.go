@@ -38,7 +38,7 @@ const sampleTrace = `{
   },
   "trace": {
     "trigger/0": [{"path": "trigger/0", "timestamp": "2026-11-24T21:05:00.100000+00:00"}],
-    "action/0": [{"path": "action/0", "timestamp": "2026-11-24T21:05:00.150000+00:00"}],
+    "action/0": [{"path": "action/0", "timestamp": "2026-11-24T21:05:00.150000+00:00", "changed_variables": {"modo": "inverno", "trigger": {"id": "0"}}}],
     "action/1": [{"path": "action/1", "timestamp": "2026-11-24T21:05:00.180000+00:00"}],
     "action/1/if": [{"path": "action/1/if", "timestamp": "2026-11-24T21:05:00.190000+00:00", "result": {"result": false, "params": {"x": 1}}}],
     "action/1/if/condition/0": [{"path": "action/1/if/condition/0", "timestamp": "2026-11-24T21:05:00.200000+00:00", "error": "boom"}],
@@ -52,6 +52,7 @@ func TestToTraces(t *testing.T) {
 	if err := json.Unmarshal([]byte(sampleTrace), &d); err != nil {
 		t.Fatal(err)
 	}
+	d.ChildContexts = map[string]string{"c1": "01KAV3RQ5Y2G3H4J5K6M7N8P9R"}
 	spans := toTraces(d).ResourceSpans().At(0).ScopeSpans().At(0).Spans()
 	if spans.Len() != 7 {
 		t.Fatalf("want root + 6 steps, got %d", spans.Len())
@@ -104,6 +105,18 @@ func TestToTraces(t *testing.T) {
 	}
 	if v, _ := root.Attributes().Get("homeassistant.last_step"); v.Str() != "action/2" {
 		t.Errorf("last_step %q", v.Str())
+	}
+	if v, _ := spans.At(2).Attributes().Get("homeassistant.step.variables.modo"); v.Str() != "inverno" {
+		t.Errorf("step variable modo = %q", v.Str())
+	}
+	if _, ok := spans.At(2).Attributes().Get("homeassistant.step.variables.trigger"); ok {
+		t.Error("nested variables must be skipped")
+	}
+	if v, _ := spans.At(5).Attributes().Get("error.type"); v.Str() != "_OTHER" {
+		t.Errorf("failed step error.type = %q", v.Str())
+	}
+	if l := spans.At(6).Links(); l.Len() != 1 || l.At(0).TraceID() != traceIDFor("01KAV3RQ5Y2G3H4J5K6M7N8P9R", "c1") || l.At(0).SpanID() != spanIDFor("c1", "root") {
+		t.Error("step that started a script must link to the script run's root span")
 	}
 	if v, _ := spans.At(6).Attributes().Get("homeassistant.step.child"); v.Str() != "script.x/c1" {
 		t.Errorf("child link %q", v.Str())
@@ -186,6 +199,7 @@ func fakeHA(t *testing.T, runs *runList) *httptest.Server {
 				result = json.RawMessage(`[
 					{"entity_id": "sensor.sala_temp", "state": "21.5", "last_updated": "2026-11-25T10:00:00+00:00", "attributes": {"device_class": "temperature", "unit_of_measurement": "°C", "friendly_name": "Sala"}},
 					{"entity_id": "switch.bomba", "state": "on", "attributes": {}},
+					{"entity_id": "climate.sala", "state": "heat", "attributes": {"current_temperature": 21.5, "min_temp": 7, "supported_features": 17, "hvac_action": "heating"}},
 					{"entity_id": "sensor.texto", "state": "abc", "attributes": {}},
 					{"entity_id": "sensor.morto", "state": "unavailable", "attributes": {"device_class": "power"}},
 					{"entity_id": "sensor.ignorado", "state": "1", "attributes": {}}]`)
@@ -338,7 +352,7 @@ func TestEntityMetrics(t *testing.T) {
 	srv := fakeHA(t, &runList{})
 	defer srv.Close()
 	cfg := createDefaultConfig().(*Config)
-	cfg.Endpoint, cfg.Token, cfg.Entities = "ws"+strings.TrimPrefix(srv.URL, "http"), "secret", true
+	cfg.Endpoint, cfg.Token, cfg.Entities, cfg.EntityAttributes = "ws"+strings.TrimPrefix(srv.URL, "http"), "secret", true, true
 	cfg.ExcludeEntities = []string{"sensor.ignorado*"}
 	r := newStatsReceiver(receivertest.NewNopSettings(componentType), cfg, new(consumertest.MetricsSink))
 	md, err := r.scrape(context.Background())
@@ -365,11 +379,29 @@ func TestEntityMetrics(t *testing.T) {
 		t.Errorf("switch on = %v", v)
 	}
 	avail := got["homeassistant.entity.available"].Gauge().DataPoints()
-	if avail.Len() != 4 { // the excluded entity is left out
+	if avail.Len() != 5 { // the excluded entity is left out
 		t.Errorf("available points: %d", avail.Len())
 	}
 	if _, ok := got["homeassistant.sensor.power"]; ok {
 		t.Error("unavailable sensor must not produce a value")
+	}
+	if m, ok := got["homeassistant.climate.attribute.current_temperature"]; !ok || m.Gauge().DataPoints().At(0).DoubleValue() != 21.5 {
+		t.Error("numeric attribute current_temperature missing")
+	}
+	for _, static := range []string{"homeassistant.climate.attribute.min_temp", "homeassistant.climate.attribute.supported_features"} {
+		if _, ok := got[static]; ok {
+			t.Errorf("static attribute %s must be skipped", static)
+		}
+	}
+	states := map[string]string{}
+	sp := got["homeassistant.entity.state"].Gauge().DataPoints()
+	for i := 0; i < sp.Len(); i++ {
+		id, _ := sp.At(i).Attributes().Get("homeassistant.entity.id")
+		st, _ := sp.At(i).Attributes().Get("homeassistant.entity.state")
+		states[id.Str()] = st.Str()
+	}
+	if states["climate.sala"] != "heat" || states["sensor.texto"] != "abc" || len(states) != 2 {
+		t.Errorf("text states: %v", states)
 	}
 	if v := got["homeassistant.core.up"].Gauge().DataPoints().At(0).DoubleValue(); v != 1 {
 		t.Errorf("core.up = %v", v)

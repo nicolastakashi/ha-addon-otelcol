@@ -28,6 +28,9 @@ type Config struct {
 	Containers bool `mapstructure:"containers"`
 	// Entities emits entity states as gauges, with device, area and floor context.
 	Entities bool `mapstructure:"entities"`
+	// EntityAttributes also emits numeric state attributes (current_temperature,
+	// brightness, battery_level...) as homeassistant.<domain>.attribute.<name>.
+	EntityAttributes bool `mapstructure:"entity_attributes"`
 	// ExcludeEntities are entity_id glob patterns (path.Match) left out of entity metrics.
 	ExcludeEntities []string `mapstructure:"exclude_entities"`
 	// ExcludeEventTypes are event types not sent as logs (state_changed by default:

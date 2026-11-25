@@ -124,13 +124,13 @@ func toLogs(ev haEvent) plog.Logs {
 		lr.SetTraceID(traceIDFor(ev.Context.ID, ev.Context.ID))
 	}
 	a := lr.Attributes()
-	a.PutStr("homeassistant.event.type", ev.EventType)
-	putIf(a, "homeassistant.event.origin", ev.Origin)
-	putIf(a, "homeassistant.context.id", ev.Context.ID)
-	putIf(a, "homeassistant.context.parent_id", ev.Context.ParentID)
+	a.PutStr(AttrHomeassistantEventType, ev.EventType)
+	putIf(a, AttrHomeassistantEventOrigin, ev.Origin)
+	putIf(a, AttrHomeassistantContextId, ev.Context.ID)
+	putIf(a, AttrHomeassistantContextParentId, ev.Context.ParentID)
 	putIf(a, "user.id", ev.Context.UserID)
 	for k, v := range ev.Data {
-		key := "homeassistant.event.data." + k
+		key := AttrHomeassistantEventData + "." + k
 		switch v := v.(type) {
 		case string:
 			a.PutStr(key, v)

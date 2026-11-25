@@ -1,0 +1,5 @@
+templates:
+  - pattern: attributes.md.j2
+    filter: '.'
+    application_mode: single
+    file_name: attributes.md

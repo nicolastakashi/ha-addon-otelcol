@@ -1,0 +1,5 @@
+templates:
+  - pattern: semconv.go.j2
+    filter: '.'
+    application_mode: single
+    file_name: semconv_gen.go

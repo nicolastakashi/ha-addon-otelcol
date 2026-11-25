@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.17.0
+
+### Added
+
+- Entity metrics: numeric state attributes as `homeassistant.<domain>.attribute.<name>`
+  (`entity_metrics_attributes`, on by default) and text states as
+  `homeassistant.entity.state` (1, with the state in the `homeassistant.entity.state` attribute)
+- Automation traces: `homeassistant.step.variables.*`, `error.type=_OTHER` on failed runs
+  and steps, and a span link from a step to the trace of the script or automation it started
+- Go constants and `docs/attributes.md` generated from the Weaver registry
+  (`scripts/generate.sh`), checked in CI
+
 ## 0.16.1
 
 ### Fixed

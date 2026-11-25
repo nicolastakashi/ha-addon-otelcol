@@ -55,6 +55,12 @@ groups:
         brief: Scalar values of the step result, one attribute per key (a condition's `result`, an action's `running_script`...).
         note: Values keep their type (boolean, double or string); nested values such as service parameters are not recorded.
         examples: ["true"]
+      - id: homeassistant.step.variables
+        type: template[string]
+        stability: development
+        brief: Scalar variables the step changed, one attribute per variable.
+        note: Nested values (the trigger object, service data) are not recorded.
+        examples: ["on"]
       - id: homeassistant.step.path
         type: string
         stability: development
@@ -107,6 +113,11 @@ groups:
         requirement_level: required
       - ref: homeassistant.step.result
         requirement_level: recommended
+      - ref: homeassistant.step.variables
+        requirement_level: recommended
+      - ref: error.type
+        requirement_level:
+          conditionally_required: When the step failed (always _OTHER; Home Assistant gives no error class).
       - ref: homeassistant.step.child
         requirement_level:
           conditionally_required: When the step started a script or automation run.
@@ -156,6 +167,11 @@ groups:
         stability: development
         brief: Device model.
         examples: [T1]
+      - id: homeassistant.entity.state
+        type: string
+        stability: development
+        brief: Text state of the entity, on homeassistant.entity.state.
+        examples: [heat, home, playing]
       - id: homeassistant.area.name
         type: string
         stability: development
@@ -199,6 +215,20 @@ groups:
         requirement_level: recommended
       - ref: homeassistant.floor.name
         requirement_level: recommended
+
+  - id: metric.homeassistant.entity.state
+    type: metric
+    metric_name: homeassistant.entity.state
+    instrument: gauge
+    unit: "1"
+    stability: development
+    brief: 1 for the entity's current text state (one series per state value).
+    note: Numeric states use homeassistant.sensor.<device_class> or homeassistant.<domain>.value instead; numeric state attributes are homeassistant.<domain>.attribute.<name>.
+    attributes:
+      - ref: homeassistant.entity.id
+        requirement_level: required
+      - ref: homeassistant.entity.state
+        requirement_level: required
 
   - id: metric.homeassistant.entity.last_updated
     type: metric

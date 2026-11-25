@@ -138,7 +138,9 @@ if [ "$(opt .host_metrics)" = "true" ]; then
   args="$args --config $CONF/host_metrics.yaml"; features="$features host_metrics"
 fi
 if [ "$(opt 'if .entity_metrics == null then true else .entity_metrics end')" = "true" ]; then
-  jq '{receivers: {homeassistant: {exclude_entities: (.entity_metrics_exclude // [])}}}' "$OPTS" > /tmp/entities.yaml
+  jq '{receivers: {homeassistant: {exclude_entities: (.entity_metrics_exclude // []),
+        entity_attributes: (if .entity_metrics_attributes == null then true else .entity_metrics_attributes end)}}}' \
+    "$OPTS" > /tmp/entities.yaml
   args="$args --config $CONF/entity_metrics.yaml --config /tmp/entities.yaml"; features="$features entity_metrics"
 fi
 if [ "$(opt 'if .event_logs == null then true else .event_logs end')" = "true" ]; then

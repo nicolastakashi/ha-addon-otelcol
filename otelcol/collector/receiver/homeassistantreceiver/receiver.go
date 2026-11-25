@@ -108,6 +108,21 @@ func (r *haReceiver) poll(ctx context.Context, c *haClient) error {
 			if err != nil {
 				return err
 			}
+			// Context of each run a step started, for the step's link to the child trace.
+			for _, steps := range d.Trace {
+				for _, st := range steps {
+					if st.ChildID == nil {
+						continue
+					}
+					var child traceDetail
+					if c.call(ctx, map[string]any{"type": "trace/get", "domain": st.ChildID.Domain, "item_id": st.ChildID.ItemID, "run_id": st.ChildID.RunID}, &child) == nil {
+						if d.ChildContexts == nil {
+							d.ChildContexts = map[string]string{}
+						}
+						d.ChildContexts[st.ChildID.RunID] = child.Context.ID
+					}
+				}
+			}
 			if err := r.next.ConsumeTraces(ctx, toTraces(d)); err != nil {
 				r.logger.Warn("Dropping Home Assistant trace", zap.String("run", key), zap.Error(err))
 			}

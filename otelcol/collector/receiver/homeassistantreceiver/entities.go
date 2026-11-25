@@ -54,11 +54,13 @@ var numericDomains = map[string]bool{"sensor": true, "number": true, "input_numb
 //	homeassistant.sensor.<device_class>  numeric sensor state (unit from the entity)
 //	homeassistant.<domain>.value         numeric state of other numeric entities
 //	homeassistant.<domain>.on            1/0 for on/off entities
+//	homeassistant.entity.state           1 with homeassistant.entity.state=<text state>
+//	homeassistant.<domain>.attribute.<k> numeric state attributes (entity_attributes)
 //	homeassistant.entity.available       0 when unavailable, else 1
 //	homeassistant.entity.last_updated    Unix seconds of the entity's last update
 //	homeassistant.core.up                1 when Core answered this scrape, else 0
 func (r *statsReceiver) entityMetrics(ctx context.Context, ms pmetric.MetricSlice, now pcommon.Timestamp) (err error) {
-	up := gauge(ms, "homeassistant.core.up", "1", "1 when Home Assistant Core answered the WebSocket API at this scrape, else 0.")
+	up := gauge(ms, MetricHomeassistantCoreUp, "1", "1 when Home Assistant Core answered the WebSocket API at this scrape, else 0.")
 	defer func() {
 		v := 1.0
 		if err != nil {
@@ -120,37 +122,45 @@ func (r *statsReceiver) entityMetrics(ctx context.Context, ms pmetric.MetricSlic
 		}
 		domain, _, _ := strings.Cut(s.EntityID, ".")
 		attrs := pcommon.NewMap()
-		attrs.PutStr("homeassistant.entity.id", s.EntityID)
-		attrs.PutStr("homeassistant.entity.domain", domain)
-		putAttr(attrs, "homeassistant.entity.name", s.Attributes["friendly_name"])
-		putAttr(attrs, "homeassistant.entity.device_class", s.Attributes["device_class"])
+		attrs.PutStr(AttrHomeassistantEntityId, s.EntityID)
+		attrs.PutStr(AttrHomeassistantEntityDomain, domain)
+		putAttr(attrs, AttrHomeassistantEntityName, s.Attributes["friendly_name"])
+		putAttr(attrs, AttrHomeassistantEntityDeviceClass, s.Attributes["device_class"])
 		e := entByID[s.EntityID]
-		putAttr(attrs, "homeassistant.entity.platform", e.Platform)
+		putAttr(attrs, AttrHomeassistantEntityPlatform, e.Platform)
 		areaID := e.AreaID
 		if d, ok := devByID[e.DeviceID]; ok {
 			name := d.NameByUser
 			if name == "" {
 				name = d.Name
 			}
-			putAttr(attrs, "homeassistant.device.name", name)
-			putAttr(attrs, "homeassistant.device.manufacturer", d.Manufacturer)
-			putAttr(attrs, "homeassistant.device.model", d.Model)
+			putAttr(attrs, AttrHomeassistantDeviceName, name)
+			putAttr(attrs, AttrHomeassistantDeviceManufacturer, d.Manufacturer)
+			putAttr(attrs, AttrHomeassistantDeviceModel, d.Model)
 			if areaID == "" {
 				areaID = d.AreaID
 			}
 		}
 		if a, ok := areaByID[areaID]; ok {
-			putAttr(attrs, "homeassistant.area.name", a.Name)
-			putAttr(attrs, "homeassistant.floor.name", floorByID[a.FloorID])
+			putAttr(attrs, AttrHomeassistantAreaName, a.Name)
+			putAttr(attrs, AttrHomeassistantFloorName, floorByID[a.FloorID])
 		}
 
 		available := 1.0
 		if s.State == "unavailable" {
 			available = 0
 		}
-		add(get("homeassistant.entity.available", "1"), now, attrs, available)
+		add(get(MetricHomeassistantEntityAvailable, "1"), now, attrs, available)
 		if !s.LastUpdated.IsZero() {
-			add(get("homeassistant.entity.last_updated", "s"), now, attrs, float64(s.LastUpdated.UnixNano())/1e9)
+			add(get(MetricHomeassistantEntityLastUpdated, "s"), now, attrs, float64(s.LastUpdated.UnixNano())/1e9)
+		}
+
+		if r.cfg.EntityAttributes {
+			for k, v := range s.Attributes {
+				if f, ok := v.(float64); ok && numericAttribute(k) {
+					add(get("homeassistant."+domain+".attribute."+k, ""), now, attrs, f)
+				}
+			}
 		}
 
 		switch {
@@ -160,20 +170,33 @@ func (r *statsReceiver) entityMetrics(ctx context.Context, ms pmetric.MetricSlic
 				v = 1
 			}
 			add(get("homeassistant."+domain+".on", "1"), now, attrs, v)
-		case numericDomains[domain]:
-			v, err := strconv.ParseFloat(s.State, 64)
-			if err != nil {
-				continue // unknown, unavailable, or a text sensor
+		case s.State == "unavailable" || s.State == "unknown" || s.State == "":
+		default:
+			if v, err := strconv.ParseFloat(s.State, 64); err == nil && numericDomains[domain] {
+				unit, _ := s.Attributes["unit_of_measurement"].(string)
+				name := "homeassistant." + domain + ".value"
+				if dc, _ := s.Attributes["device_class"].(string); domain == "sensor" && dc != "" {
+					name = "homeassistant.sensor." + dc
+				}
+				add(get(name, unit), now, attrs, v)
+				continue
 			}
-			unit, _ := s.Attributes["unit_of_measurement"].(string)
-			name := "homeassistant." + domain + ".value"
-			if dc, _ := s.Attributes["device_class"].(string); domain == "sensor" && dc != "" {
-				name = "homeassistant.sensor." + dc
-			}
-			add(get(name, unit), now, attrs, v)
+			// A text state (heat, home, playing...): 1 with the state as an attribute.
+			// ponytail: one series per state value; exclude chatty entities if cardinality hurts.
+			st := pcommon.NewMap()
+			attrs.CopyTo(st)
+			st.PutStr(AttrHomeassistantEntityState, s.State)
+			add(get(MetricHomeassistantEntityState, "1"), now, st, 1)
 		}
 	}
 	return nil
+}
+
+// numericAttribute keeps attributes that change with the entity (current_temperature,
+// brightness, battery_level...) and skips static ones (supported_features, min/max, steps).
+func numericAttribute(k string) bool {
+	return k != "supported_features" && !strings.HasPrefix(k, "min_") && !strings.HasPrefix(k, "max_") &&
+		!strings.HasSuffix(k, "step") && k != "friendly_name"
 }
 
 func (r *statsReceiver) excluded(entityID string) bool {

@@ -126,6 +126,7 @@ ha_traces: true
 host_metrics: true
 container_metrics: true
 entity_metrics: true
+entity_metrics_attributes: true
 entity_metrics_exclude: []
 event_logs: true
 event_logs_exclude: [state_changed]
@@ -167,6 +168,7 @@ scrape_interval: 60s
 | `logs_parse` | bool | `false` | Advanced. Turns JSON and Python log lines into attributes. See "Logs". |
 | `ha_traces` | bool | `true` | Send every automation and script run as a trace. |
 | `entity_metrics` | bool | `true` | Send every entity state as a metric, with device, area and floor. See "Entity metrics". |
+| `entity_metrics_attributes` | bool | `true` | Also send numeric entity attributes (current temperature, brightness, battery level...) as metrics. |
 | `entity_metrics_exclude` | list of entity ids | `[]` | Entities left out of entity metrics. Wildcards work, for example `sensor.*_linkquality`. |
 | `event_logs` | bool | `true` | Send Home Assistant events as logs, linked to the automation trace that caused them. See "Event logs". |
 | `event_logs_exclude` | list of event types | `[state_changed]` | Event types not sent. |
@@ -307,6 +309,8 @@ no alias) and lasts from the run's real start to its end. Under it there is one 
 trigger, condition and action, nested like the configuration: a condition of a `choose`
 sits under its `choose` action.
 
+A step that starts a script or another automation links to that run's trace (span link).
+
 Step names come from the configuration: the path part, the index, and the alias or type,
 for example `action 2: Ligar resistência`, `action 3: switch.turn_on`, `action 0: choose`
 or `conditions 0: state`. A run or step with an error gets status `ERROR` and the error
@@ -327,6 +331,8 @@ message.
 | `homeassistant.last_step` | root | Path of the last step the run reached |
 | `user.id` | root | Home Assistant user who started the run, when there is one |
 | `homeassistant.step.path` | step | Path of the step in the configuration, for example `action/1/if/condition/0` |
+| `homeassistant.step.variables.<key>` | step | Scalar variables the step changed |
+| `error.type` | root, step | `_OTHER` when the run or step failed (Home Assistant gives no error class) |
 | `homeassistant.step.result.<key>` | step | Scalar values of the step result, for example `homeassistant.step.result.result` of a condition |
 | `homeassistant.step.child` | step | Run started by the step, as `domain.item_id/run_id` |
 
@@ -350,6 +356,8 @@ The `entity_metrics` option reads every entity state over the WebSocket API, eve
 | `homeassistant.sensor.<device_class>` | Numeric state of a sensor with a device class, for example `homeassistant.sensor.temperature`. The unit comes from the entity. |
 | `homeassistant.<domain>.value` | Numeric state of other sensors, `number`, `input_number` and `counter` entities |
 | `homeassistant.<domain>.on` | `1` or `0` for entities whose state is `on` or `off`, for example `homeassistant.switch.on` |
+| `homeassistant.entity.state` | `1` for the entity's text state, which is in the `homeassistant.entity.state` attribute (`heat`, `home`, `playing`...) |
+| `homeassistant.<domain>.attribute.<name>` | Numeric state attributes, for example `homeassistant.climate.attribute.current_temperature` (`entity_metrics_attributes`). Static ones such as `min_temp` or `supported_features` are skipped. |
 | `homeassistant.entity.available` | `0` when the entity is `unavailable`, else `1` |
 | `homeassistant.entity.last_updated` | Unix time (seconds) of the entity's last state update |
 | `homeassistant.core.up` | `1` when Home Assistant Core answered at this scrape, `0` when it did not. No entity attributes. Alert on it for "Home Assistant down". |
@@ -490,6 +498,9 @@ The add-on applies these last, on every signal: a name that is already set, such
 `service.namespace`, is overwritten everywhere.
 
 ## Attribute reference
+
+The full reference of everything defined in the registry, generated from it, is in
+[docs/attributes.md](https://github.com/nicolastakashi/ha-addon-otelcol/blob/main/docs/attributes.md).
 
 Every attribute the add-on emits. "Semconv" means an [OpenTelemetry semantic convention](https://opentelemetry.io/docs/specs/semconv/).
 "Custom" means defined in the add-on's Weaver registry, in the

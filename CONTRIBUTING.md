@@ -80,3 +80,14 @@ To package it for a backend that accepts Weaver registries:
 ```sh
 weaver registry package -r model --future --v2 -o <dir> --resolved-schema-uri <uri>
 ```
+
+The registry is also the source of generated code and docs, the way the OpenTelemetry
+semantic-conventions repo works: Go constants for the receiver
+(`semconv_gen.go`) and the telemetry reference ([`docs/attributes.md`](docs/attributes.md)),
+from the templates in [`templates/registry/`](templates/registry/). After changing `model/`:
+
+```sh
+./scripts/generate.sh
+```
+
+CI fails if the committed output is out of date.
