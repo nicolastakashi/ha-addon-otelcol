@@ -1,6 +1,6 @@
 name: ha_addon_otelcol
 description: Attributes emitted by the OTel Collector (community) Home Assistant add-on that OpenTelemetry semantic conventions do not define.
-schema_url: https://github.com/nicolastakashi/ha-addon-otelcol/0.6.0
+schema_url: https://github.com/nicolastakashi/ha-addon-otelcol/0.14.0
 dependencies:
   - name: otel
     registry_path: https://github.com/open-telemetry/semantic-conventions.git@v1.37.0[model]
