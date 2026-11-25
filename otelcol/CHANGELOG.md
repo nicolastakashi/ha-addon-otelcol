@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.1
+
+### Fixed
+
+- Host metrics: disk usage of `/data` was never sent (the scraper skipped bind mounts)
+
 ## 0.8.0
 
 ### Added

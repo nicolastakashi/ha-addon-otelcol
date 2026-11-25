@@ -20,6 +20,9 @@ receivers:
           system.uptime:
             enabled: true
       filesystem:
+        # /data is a bind mount; without this gopsutil skips bind mounts. The mount point
+        # filter below keeps only /data, so no virtual filesystem gets through.
+        include_virtual_filesystems: true
         include_mount_points:
           mount_points: [/data]
           match_type: strict
