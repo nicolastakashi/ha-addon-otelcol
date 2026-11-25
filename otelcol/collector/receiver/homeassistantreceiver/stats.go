@@ -3,6 +3,7 @@ package homeassistantreceiver
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -26,9 +27,8 @@ type containerStats struct {
 	BlkWrite    int64   `json:"blk_write"`
 }
 
-// statsReceiver polls the Supervisor for the resource usage of Home Assistant Core, the
-// Supervisor and every started add-on, as semconv container.* metrics labelled with the
-// same container.name the journal uses.
+// statsReceiver is the metrics side of the receiver: container resource usage from the
+// Supervisor (containers: true) and entity states with registry context (entities: true).
 type statsReceiver struct {
 	cfg    *Config
 	logger *zap.Logger
@@ -53,10 +53,14 @@ func (r *statsReceiver) Start(_ context.Context, _ component.Host) error {
 		t := time.NewTicker(r.cfg.CollectionInterval)
 		defer t.Stop()
 		for {
-			if md, err := r.scrape(ctx); err != nil {
-				r.logger.Warn("Reading container stats from the Supervisor failed", zap.Error(err))
-			} else if err := r.next.ConsumeMetrics(ctx, md); err != nil {
-				r.logger.Warn("Dropping container stats", zap.Error(err))
+			md, err := r.scrape(ctx)
+			if err != nil {
+				r.logger.Warn("Reading Home Assistant metrics failed", zap.Error(err))
+			}
+			if md.DataPointCount() > 0 {
+				if err := r.next.ConsumeMetrics(ctx, md); err != nil {
+					r.logger.Warn("Dropping Home Assistant metrics", zap.Error(err))
+				}
 			}
 			select {
 			case <-ctx.Done():
@@ -97,6 +101,25 @@ func (r *statsReceiver) get(ctx context.Context, path string, out any) error {
 }
 
 func (r *statsReceiver) scrape(ctx context.Context) (pmetric.Metrics, error) {
+	md := pmetric.NewMetrics()
+	sm := md.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty()
+	sm.Scope().SetName("github.com/nicolastakashi/ha-addon-otelcol/homeassistantreceiver")
+	now := pcommon.NewTimestampFromTime(time.Now())
+	var errs []error
+	if r.cfg.Containers {
+		if err := r.containerMetrics(ctx, sm.Metrics(), now); err != nil {
+			errs = append(errs, fmt.Errorf("container metrics: %w", err))
+		}
+	}
+	if r.cfg.Entities {
+		if err := r.entityMetrics(ctx, sm.Metrics(), now); err != nil {
+			errs = append(errs, fmt.Errorf("entity metrics: %w", err))
+		}
+	}
+	return md, errors.Join(errs...)
+}
+
+func (r *statsReceiver) containerMetrics(ctx context.Context, ms pmetric.MetricSlice, now pcommon.Timestamp) error {
 	targets := []struct{ name, path string }{
 		{"homeassistant", "/core/stats"},
 		{"hassio_supervisor", "/supervisor/stats"},
@@ -108,7 +131,7 @@ func (r *statsReceiver) scrape(ctx context.Context) (pmetric.Metrics, error) {
 		} `json:"addons"`
 	}
 	if err := r.get(ctx, "/addons", &addons); err != nil {
-		return pmetric.Metrics{}, err
+		return err
 	}
 	for _, a := range addons.Addons {
 		if a.State == "started" {
@@ -116,17 +139,11 @@ func (r *statsReceiver) scrape(ctx context.Context) (pmetric.Metrics, error) {
 		}
 	}
 
-	md := pmetric.NewMetrics()
-	sm := md.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty()
-	sm.Scope().SetName("github.com/nicolastakashi/ha-addon-otelcol/homeassistantreceiver")
-	ms := sm.Metrics()
 	cpu := gauge(ms, "container.cpu.usage", "{cpu}", "CPU used by the container, in CPUs.")
 	// ponytail: semconv calls container.memory.usage a counter; memory goes down, so a gauge.
 	mem := gauge(ms, "container.memory.usage", "By", "Memory used by the container.")
 	disk := counter(ms, "container.disk.io", "By", "Disk bytes read and written by the container.")
 	net := counter(ms, "container.network.io", "By", "Network bytes received and sent by the container.")
-
-	now := pcommon.NewTimestampFromTime(time.Now())
 	for _, t := range targets {
 		var s containerStats
 		if err := r.get(ctx, t.path, &s); err != nil {
@@ -140,7 +157,7 @@ func (r *statsReceiver) scrape(ctx context.Context) (pmetric.Metrics, error) {
 		dir(point(net.Sum().DataPoints(), now, r.start, t.name), "network.io.direction", "receive").SetIntValue(s.NetworkRx)
 		dir(point(net.Sum().DataPoints(), now, r.start, t.name), "network.io.direction", "transmit").SetIntValue(s.NetworkTx)
 	}
-	return md, nil
+	return nil
 }
 
 func gauge(ms pmetric.MetricSlice, name, unit, desc string) pmetric.Metric {

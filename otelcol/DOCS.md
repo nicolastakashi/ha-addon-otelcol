@@ -46,14 +46,7 @@ profiles), [resources](https://opentelemetry.io/docs/concepts/resources/) and
 5. Open the **Log** tab. A working start ends with a line like this:
 
    ```text
-   [otelcol] host.name=homeassistant, exporting to https://otlp.example.com: logs ha_metrics ha_traces host_metrics
-   ```
-
-6. Optional, for Home Assistant metrics: add the Prometheus integration to
-   `configuration.yaml` and restart Home Assistant:
-
-   ```yaml
-   prometheus:
+   [otelcol] host.name=homeassistant, exporting to https://otlp.example.com: logs logs_multiline ha_traces host_metrics entity_metrics container_metrics
    ```
 
 Logs start with new journal entries. The add-on does not send entries written before its
@@ -102,10 +95,12 @@ logs_min_priority: info
 logs_min_severity: info
 logs_multiline: true
 logs_parse: false
-ha_metrics: true
+ha_metrics: false
 ha_traces: true
 host_metrics: true
 container_metrics: true
+entity_metrics: true
+entity_metrics_exclude: []
 profiles: false
 scrape_interval: 60s
 ```
@@ -138,11 +133,13 @@ scrape_interval: 60s
 | `logs_multiline` | bool | `true` | Send a Python traceback from a container as one log record instead of one per line. |
 | `logs_parse` | bool | `false` | Advanced. Turns JSON and Python log lines into attributes. See "Logs". |
 | `ha_traces` | bool | `true` | Send every automation and script run as a trace. |
-| `ha_metrics` | bool | `true` | Scrape Home Assistant's Prometheus endpoint. Needs the Prometheus integration. |
+| `entity_metrics` | bool | `true` | Send every entity state as a metric, with device, area and floor. See "Entity metrics". |
+| `entity_metrics_exclude` | list of entity ids | `[]` | Entities left out of entity metrics. Wildcards work, for example `sensor.*_linkquality`. |
+| `ha_metrics` | bool | `false` | Scrape Home Assistant's Prometheus endpoint instead. Needs the Prometheus integration. |
 | `host_metrics` | bool | `true` | Send CPU, memory, load, paging, network, data disk and uptime metrics of the machine. |
 | `container_metrics` | bool | `true` | Send CPU, memory, disk and network of Home Assistant Core, the Supervisor and every started add-on. |
 | `profiles` | bool | `false` | Experimental. Send profiles of Home Assistant's Python threads. See "Profiles (experimental)". |
-| `scrape_interval` | `<n>s` or `<n>m` | `60s` | How often `ha_metrics`, `host_metrics` and `container_metrics` collect. Must be greater than zero. Traces are polled every 10 s regardless. |
+| `scrape_interval` | `<n>s` or `<n>m` | `60s` | How often `entity_metrics`, `ha_metrics`, `host_metrics` and `container_metrics` collect. Must be greater than zero. Traces are polled every 10 s regardless. |
 
 **Note:** Keep `logs_min_priority` at `info`. Docker writes every container line to the
 journal with priority 6 (`info`, stdout) or 3 (`err`, stderr). A stricter value such as
@@ -262,9 +259,26 @@ message.
   oldest. Raise `stored_traces` in the automation's `trace:` settings if this matters.
 - The trace store is not a stable API. A Home Assistant release can change its format.
 
-## Home Assistant metrics
+## Entity metrics
 
-The `ha_metrics` option scrapes Home Assistant's `/api/prometheus` endpoint through the
+The `entity_metrics` option reads every entity state over the WebSocket API, every
+`scrape_interval`, and sends it as a gauge. It needs no integration and no token.
+
+| Metric | Value |
+|---|---|
+| `homeassistant.sensor.<device_class>` | Numeric state of a sensor with a device class, for example `homeassistant.sensor.temperature`. The unit comes from the entity. |
+| `homeassistant.<domain>.value` | Numeric state of other sensors, `number`, `input_number` and `counter` entities |
+| `homeassistant.<domain>.on` | `1` or `0` for entities whose state is `on` or `off`, for example `homeassistant.switch.on` |
+| `homeassistant.entity.available` | `0` when the entity is `unavailable`, else `1` |
+
+Every data point carries the entity and where it is: `homeassistant.entity.id`,
+`.domain`, `.name`, `.device_class`, `.platform`, `homeassistant.device.name`,
+`.manufacturer`, `.model`, `homeassistant.area.name` and `homeassistant.floor.name`. Use
+`entity_metrics_exclude` to leave out noisy entities.
+
+## Home Assistant metrics (Prometheus)
+
+The `ha_metrics` option, off by default, scrapes Home Assistant's `/api/prometheus` endpoint through the
 Supervisor proxy, every `scrape_interval`. You do not need a long-lived access token.
 
 It requires the [Prometheus integration](https://www.home-assistant.io/integrations/prometheus/).
@@ -398,7 +412,7 @@ The registry builds on semantic conventions v1.37.0.
 | `thread.name` | log | logs (`logs_parse`) | Semconv |
 | `python.logger.name` | log | logs (`logs_parse`) | Custom |
 | JSON keys | log | logs (`logs_parse`) | From the log line |
-| `homeassistant.*` | span | traces | Custom |
+| `homeassistant.*` | span, metric | traces, entity metrics | Custom |
 | `user.id` | span | traces | Semconv |
 | `thread.name` | sample label | profiles | Semconv |
 | `system.*` | metric names | host metrics | Semconv |

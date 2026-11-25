@@ -1,0 +1,14 @@
+# Every entity state as a gauge, with device, area and floor context, over the WebSocket
+# API (no Prometheus integration needed). exclude_entities comes from run.sh.
+receivers:
+  homeassistant:
+    token: "${env:SUPERVISOR_TOKEN}"
+    collection_interval: "${env:SCRAPE_INTERVAL}"
+    entities: true
+
+service:
+  pipelines:
+    metrics/homeassistant:
+      receivers: [homeassistant]
+      processors: [resource]
+      exporters: [otlp_http]

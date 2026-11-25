@@ -9,7 +9,8 @@ Home Assistant OS and sends logs, traces, metrics and profiles to any [OTLP](htt
 |---|---|---|
 | Logs | `logs` | HAOS systemd journal: host services, kernel, Supervisor, Core and every add-on |
 | Traces | `ha_traces` | Automation and script runs, one trace per run ([Home Assistant receiver](otelcol/collector/receiver/homeassistantreceiver)) |
-| Metrics | `ha_metrics` | Home Assistant `/api/prometheus`, through the Supervisor proxy |
+| Metrics | `entity_metrics` | Every entity state, with device, area and floor |
+| Metrics | `container_metrics` | CPU, memory, disk and network of Core, the Supervisor and every add-on |
 | Metrics | `host_metrics` | Host CPU, memory, load, paging, network, data disk and uptime (`system.*`) |
 | Profiles | `profiles` | Experimental: Home Assistant's Python threads, sampled by a bundled integration |
 
@@ -30,10 +31,6 @@ Repositories**:
 ```text
 https://github.com/nicolastakashi/ha-addon-otelcol
 ```
-
-For `ha_metrics`, also enable the
-[Prometheus integration](https://www.home-assistant.io/integrations/prometheus/) in Home
-Assistant (`prometheus:` in `configuration.yaml`).
 
 ## Configure the minimum
 

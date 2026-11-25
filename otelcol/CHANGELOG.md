@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.9.0
+
+### Added
+
+- `entity_metrics` option (on by default): every entity state as a gauge
+  (`homeassistant.sensor.<device_class>`, `homeassistant.<domain>.value`,
+  `homeassistant.<domain>.on`, `homeassistant.entity.available`) with entity, device, area
+  and floor attributes, over the WebSocket API. No Prometheus integration needed.
+  `entity_metrics_exclude` leaves entities out
+
+### Changed
+
+- `ha_metrics` (Prometheus scrape) is off by default for new installs; existing
+  configurations keep their value
+
 ## 0.8.1
 
 ### Fixed

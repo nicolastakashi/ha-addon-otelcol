@@ -110,3 +110,92 @@ groups:
       - ref: homeassistant.step.child
         requirement_level:
           conditionally_required: When the step started a script or automation run.
+
+  - id: registry.homeassistant.entity
+    type: attribute_group
+    display_name: Home Assistant entity attributes
+    brief: Entity, device, area and floor context on entity metrics.
+    attributes:
+      - id: homeassistant.entity.id
+        type: string
+        stability: development
+        brief: Entity id.
+        examples: [sensor.sala_temperature]
+      - id: homeassistant.entity.domain
+        type: string
+        stability: development
+        brief: Entity domain.
+        examples: [sensor, switch]
+      - id: homeassistant.entity.name
+        type: string
+        stability: development
+        brief: Friendly name of the entity.
+        examples: [Sala temperature]
+      - id: homeassistant.entity.device_class
+        type: string
+        stability: development
+        brief: Device class of the entity.
+        examples: [temperature, power]
+      - id: homeassistant.entity.platform
+        type: string
+        stability: development
+        brief: Integration that provides the entity.
+        examples: [zha, shelly]
+      - id: homeassistant.device.name
+        type: string
+        stability: development
+        brief: Name of the device the entity belongs to.
+        examples: [Termometro sala]
+      - id: homeassistant.device.manufacturer
+        type: string
+        stability: development
+        brief: Device manufacturer.
+        examples: [Aqara]
+      - id: homeassistant.device.model
+        type: string
+        stability: development
+        brief: Device model.
+        examples: [T1]
+      - id: homeassistant.area.name
+        type: string
+        stability: development
+        brief: Area of the entity, or of its device.
+        examples: [Sala]
+      - id: homeassistant.floor.name
+        type: string
+        stability: development
+        brief: Floor of the area.
+        examples: [Rés-do-chão]
+
+  - id: metric.homeassistant.entity.available
+    type: metric
+    metric_name: homeassistant.entity.available
+    instrument: gauge
+    unit: "1"
+    stability: development
+    brief: 0 when the entity is unavailable, else 1.
+    note: >
+      Entity values use the same attributes: `homeassistant.sensor.<device_class>` (numeric
+      sensors, unit from the entity), `homeassistant.<domain>.value` (other numeric
+      entities) and `homeassistant.<domain>.on` (1/0 for on/off entities).
+    attributes:
+      - ref: homeassistant.entity.id
+        requirement_level: required
+      - ref: homeassistant.entity.domain
+        requirement_level: required
+      - ref: homeassistant.entity.name
+        requirement_level: recommended
+      - ref: homeassistant.entity.device_class
+        requirement_level: recommended
+      - ref: homeassistant.entity.platform
+        requirement_level: recommended
+      - ref: homeassistant.device.name
+        requirement_level: recommended
+      - ref: homeassistant.device.manufacturer
+        requirement_level: recommended
+      - ref: homeassistant.device.model
+        requirement_level: recommended
+      - ref: homeassistant.area.name
+        requirement_level: recommended
+      - ref: homeassistant.floor.name
+        requirement_level: recommended

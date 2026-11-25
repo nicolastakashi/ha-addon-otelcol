@@ -14,6 +14,7 @@ import (
 	"github.com/coder/websocket/wsjson"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/consumer/consumertest"
+	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/receiver/receivertest"
 )
@@ -180,6 +181,21 @@ func fakeHA(t *testing.T, runs *runList) *httptest.Server {
 					}
 					result = l
 				}
+			case "get_states":
+				result = json.RawMessage(`[
+					{"entity_id": "sensor.sala_temp", "state": "21.5", "attributes": {"device_class": "temperature", "unit_of_measurement": "°C", "friendly_name": "Sala"}},
+					{"entity_id": "switch.bomba", "state": "on", "attributes": {}},
+					{"entity_id": "sensor.texto", "state": "abc", "attributes": {}},
+					{"entity_id": "sensor.morto", "state": "unavailable", "attributes": {"device_class": "power"}},
+					{"entity_id": "sensor.ignorado", "state": "1", "attributes": {}}]`)
+			case "config/entity_registry/list":
+				result = json.RawMessage(`[{"entity_id": "sensor.sala_temp", "device_id": "d1", "platform": "zha"}]`)
+			case "config/device_registry/list":
+				result = json.RawMessage(`[{"id": "d1", "name": "Termometro", "manufacturer": "Aqara", "model": "T1", "area_id": "sala"}]`)
+			case "config/area_registry/list":
+				result = json.RawMessage(`[{"area_id": "sala", "name": "Sala", "floor_id": "r0"}]`)
+			case "config/floor_registry/list":
+				result = json.RawMessage(`[{"floor_id": "r0", "name": "Rés-do-chão"}]`)
 			case "trace/get":
 				result = json.RawMessage(strings.Replace(sampleTrace, `"run_id": "r2"`, `"run_id": "`+cmd["run_id"].(string)+`"`, 1))
 			}
@@ -280,7 +296,7 @@ func TestStatsReceiver(t *testing.T) {
 	}))
 	defer sup.Close()
 	cfg := createDefaultConfig().(*Config)
-	cfg.SupervisorEndpoint, cfg.Token = sup.URL, "secret"
+	cfg.SupervisorEndpoint, cfg.Token, cfg.Containers = sup.URL, "secret", true
 	sink := new(consumertest.MetricsSink)
 	r := newStatsReceiver(receivertest.NewNopSettings(componentType), cfg, sink)
 	md, err := r.scrape(context.Background())
@@ -297,5 +313,44 @@ func TestStatsReceiver(t *testing.T) {
 	}
 	if n := ms.At(3).Sum().DataPoints().Len(); ms.At(3).Name() != "container.network.io" || n != 6 {
 		t.Errorf("network.io points: %d", n)
+	}
+}
+
+func TestEntityMetrics(t *testing.T) {
+	srv := fakeHA(t, &runList{})
+	defer srv.Close()
+	cfg := createDefaultConfig().(*Config)
+	cfg.Endpoint, cfg.Token, cfg.Entities = "ws"+strings.TrimPrefix(srv.URL, "http"), "secret", true
+	cfg.ExcludeEntities = []string{"sensor.ignorado*"}
+	r := newStatsReceiver(receivertest.NewNopSettings(componentType), cfg, new(consumertest.MetricsSink))
+	md, err := r.scrape(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]pmetric.Metric{}
+	ms := md.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics()
+	for i := 0; i < ms.Len(); i++ {
+		got[ms.At(i).Name()] = ms.At(i)
+	}
+	temp, ok := got["homeassistant.sensor.temperature"]
+	if !ok || temp.Unit() != "°C" || temp.Gauge().DataPoints().At(0).DoubleValue() != 21.5 {
+		t.Fatalf("temperature metric missing or wrong: %v", got)
+	}
+	a := temp.Gauge().DataPoints().At(0).Attributes()
+	for k, want := range map[string]string{"homeassistant.area.name": "Sala", "homeassistant.floor.name": "Rés-do-chão",
+		"homeassistant.device.manufacturer": "Aqara", "homeassistant.entity.platform": "zha"} {
+		if v, _ := a.Get(k); v.Str() != want {
+			t.Errorf("%s = %q, want %q", k, v.Str(), want)
+		}
+	}
+	if v := got["homeassistant.switch.on"].Gauge().DataPoints().At(0).DoubleValue(); v != 1 {
+		t.Errorf("switch on = %v", v)
+	}
+	avail := got["homeassistant.entity.available"].Gauge().DataPoints()
+	if avail.Len() != 4 { // the excluded entity is left out
+		t.Errorf("available points: %d", avail.Len())
+	}
+	if _, ok := got["homeassistant.sensor.power"]; ok {
+		t.Error("unavailable sensor must not produce a value")
 	}
 }

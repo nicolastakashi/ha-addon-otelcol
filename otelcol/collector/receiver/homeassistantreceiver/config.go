@@ -21,8 +21,15 @@ type Config struct {
 	Domains []string `mapstructure:"domains"`
 	// SupervisorEndpoint is the Supervisor REST API, used for container metrics.
 	SupervisorEndpoint string `mapstructure:"supervisor_endpoint"`
-	// CollectionInterval is how often container metrics are read.
+	// CollectionInterval is how often metrics are read.
 	CollectionInterval time.Duration `mapstructure:"collection_interval"`
+	// Containers emits the resource usage of Core, the Supervisor and started add-ons
+	// (needs the Supervisor manager role).
+	Containers bool `mapstructure:"containers"`
+	// Entities emits entity states as gauges, with device, area and floor context.
+	Entities bool `mapstructure:"entities"`
+	// ExcludeEntities are entity_id glob patterns (path.Match) left out of entity metrics.
+	ExcludeEntities []string `mapstructure:"exclude_entities"`
 }
 
 // Validate checks the configuration.
