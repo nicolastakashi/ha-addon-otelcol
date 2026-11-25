@@ -63,43 +63,14 @@ OTLP profiles are alpha. Check that your backend accepts them before you enable 
 
 ```mermaid
 flowchart LR
-  subgraph HAOS["Home Assistant OS"]
-    J[(systemd journal)]
-    S[Supervisor proxy]
-    C[Home Assistant Core]
-    P[otel_profiler integration]
-    subgraph A["otelcol add-on (otelcol-ha)"]
-      RJ[journald receiver]
-      RH[homeassistant receiver]
-      RP[prometheus receiver]
-      RM[hostmetrics receiver]
-      RF[pprof receiver]
-      Q[(persistent queue in /data)]
-      E[otlp_http exporter]
-    end
-  end
-  J --> RJ
-  C -- WebSocket trace store --> S --> RH
-  C -- /api/prometheus --> S --> RP
-  H[(/proc and /sys)] --> RM
-  P -- pprof 127.0.0.1:4040 --> RF
-  RJ & RH & RP & RM & RF --> Q --> E
-  E -- OTLP/HTTP --> B[(Your backend)]
+  J[System journal] --> A
+  H[Home Assistant] --> A
+  M[Host] --> A
+  A[OTel Collector add-on] -- OTLP/HTTP --> B[Your backend]
 ```
 
-In short: five receivers read the journal, Home Assistant (through the Supervisor), the
-host and the profiler integration; everything passes through a disk-backed queue to one
-OTLP/HTTP exporter.
-
-- `run.sh` reads the add-on options and builds the collector command line from config
-  fragments in [`otelcol/rootfs/etc/otelcol/`](otelcol/rootfs/etc/otelcol/), one per option.
-- The collector is `otelcol-ha`, built with the
-  [OpenTelemetry Collector Builder](https://opentelemetry.io/docs/collector/extend/ocb/)
-  (OCB). It has only the components the add-on uses: upstream contrib receivers,
-  processors and the OTLP/HTTP exporter, plus the custom `homeassistant` receiver. See
-  [`builder-config.yaml`](otelcol/collector/builder-config.yaml).
-- Every signal goes through one resource processor and one exporter. The export queue
-  lives on disk in `/data`, so data survives restarts and backend outages.
+While the backend is unreachable, data waits in a queue on disk and is sent when it comes
+back.
 
 ## Semantic conventions and Weaver
 
