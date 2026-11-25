@@ -44,6 +44,11 @@ jobs:
       - name: Collector config checks (traceback recombine, pipeline names)
         working-directory: otelcol/tests/recombine
         run: go test ./...
+      - name: Health sensors parser check
+        working-directory: .
+        run: |
+          printf 'otelcol_exporter_queue_capacity{data_type="logs"} 2e+08\notelcol_exporter_queue_size{data_type="logs"} 5e+07\notelcol_exporter_sent_log_records{exporter="otlp_http"} 3000000000\notelcol_exporter_send_failed_spans{exporter="otlp_http"} 7\n' \
+            | awk -f otelcol/rootfs/usr/share/otelcol/health.awk | grep -qx '3000000000 7 25.0 50000000'
       - name: OTel Logs integration self-check
         working-directory: .
         run: python3 -I otelcol/tests/otel_logs_check.py

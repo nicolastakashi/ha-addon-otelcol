@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.15.0
+
+### Added
+
+- `health_sensors` option (on by default): `sensor.otel_collector_exported`, `_dropped`,
+  `_queue` and `_status` in Home Assistant, from the collector's own metrics
+  (`127.0.0.1:18888`). The status is `error` while the queue grows and nothing is sent
+
 ## 0.14.0
 
 ### Changed

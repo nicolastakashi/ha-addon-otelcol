@@ -191,6 +191,42 @@ else
 fi
 export CORE_LOGS_CONTAINER
 
+# Health sensors: every scrape_interval, read the collector's own metrics (health.yaml) and
+# publish them as Home Assistant states. Plain states: Home Assistant drops them on restart
+# and the next round writes them again.
+health_state() {  # health_state <object_id> <state> <friendly name> <extra attributes json>
+  core_post "states/sensor.$1" "{\"state\": \"$2\", \"attributes\": {\"friendly_name\": \"$3\", $4}}" \
+    >/dev/null 2>&1 || true
+}
+health_loop() {
+  case "$SCRAPE_INTERVAL" in *m) every=$(( ${SCRAPE_INTERVAL%m} * 60 )) ;; *) every=${SCRAPE_INTERVAL%s} ;; esac
+  last_sent=""; last_queue=""
+  while sleep "$every"; do
+    metrics="$(curl -fsS --max-time 5 http://127.0.0.1:18888/metrics 2>/dev/null)" || continue
+    # shellcheck disable=SC2046
+    set -- $(printf '%s\n' "$metrics" | awk -f /usr/share/otelcol/health.awk)
+    [ $# -eq 4 ] || continue
+    # The exporter retries forever, so an unreachable backend shows as a growing queue
+    # with nothing sent, not as failures; failures are items dropped (queue full).
+    status=ok
+    if [ -n "$last_sent" ] && [ "$1" = "$last_sent" ] \
+       && awk -v q="$4" -v l="$last_queue" 'BEGIN { exit !(q > l) }'; then status=error; fi
+    last_sent="$1"; last_queue="$4"
+    health_state otel_collector_exported "$1" "OTel Collector exported" \
+      '"state_class": "total_increasing", "unit_of_measurement": "items", "icon": "mdi:upload"'
+    health_state otel_collector_dropped "$2" "OTel Collector dropped" \
+      '"state_class": "total_increasing", "unit_of_measurement": "items", "icon": "mdi:upload-off"'
+    health_state otel_collector_queue "$3" "OTel Collector queue" \
+      '"state_class": "measurement", "unit_of_measurement": "%", "icon": "mdi:tray-full"'
+    health_state otel_collector_status "$status" "OTel Collector export status" \
+      '"icon": "mdi:check-network"'
+  done
+}
+if [ "$(opt 'if .health_sensors == null then true else .health_sensors end')" = "true" ] && [ -n "$SUPERVISOR_TOKEN" ]; then
+  args="$args --config $CONF/health.yaml"; features="$features health_sensors"
+  health_loop &
+fi
+
 if [ -z "$features" ]; then
   echo "[otelcol] every feature is disabled, nothing to do." >&2
   exit 1

@@ -59,6 +59,9 @@ configuration:
   core_logs:
     name: Structured Core logs
     description: Install the bundled OTel Logs integration and send Home Assistant's logs structured (code, exception, logger) and linked to the automation trace that wrote them. Restart Home Assistant once after enabling.
+  health_sensors:
+    name: Health sensors
+    description: Publish the add-on's export health in Home Assistant (exported items, failures, queue usage, status).
   profiles:
     name: Profiles (experimental)
     description: Install the bundled OTel Profiler integration and send profiles of Home Assistant. Restart Home Assistant once after enabling. Needs a backend that accepts OTLP profiles.

@@ -1,0 +1,12 @@
+# Optional (health_sensors: true): the collector's own metrics on the loopback interface,
+# read by run.sh to publish health sensors in Home Assistant.
+service:
+  telemetry:
+    metrics:
+      level: basic
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: 127.0.0.1
+                port: 18888

@@ -23,6 +23,7 @@ Home Assistant.
 - Profiles (experimental)
 - Resource attributes
 - Attribute reference
+- Health sensors
 - Buffering and outages
 - Troubleshooting
 - Privacy and security
@@ -107,6 +108,7 @@ entity_metrics_exclude: []
 event_logs: true
 event_logs_exclude: [state_changed]
 core_logs: false
+health_sensors: true
 profiles: false
 scrape_interval: 60s
 ```
@@ -144,6 +146,7 @@ scrape_interval: 60s
 | `event_logs` | bool | `true` | Send Home Assistant events as logs, linked to the automation trace that caused them. See "Event logs". |
 | `event_logs_exclude` | list of event types | `[state_changed]` | Event types not sent. |
 | `core_logs` | bool | `false` | Install the bundled OTel Logs integration: Home Assistant's logs arrive structured and linked to automation traces. See "Structured Core logs". |
+| `health_sensors` | bool | `true` | Publish the add-on's export health as sensors in Home Assistant. See "Health sensors". |
 | `ha_metrics` | bool | `false` | Scrape Home Assistant's Prometheus endpoint instead. Needs the Prometheus integration. |
 | `host_metrics` | bool | `true` | Send CPU, memory, load, paging, network, data disk and uptime metrics of the machine. |
 | `container_metrics` | bool | `true` | Send CPU, memory, disk and network of Home Assistant Core, the Supervisor and every started add-on. |
@@ -486,6 +489,21 @@ The registry builds on semantic conventions v1.37.0.
 | `system.*` | metric names | host metrics | Semconv |
 
 Metric names from `ha_metrics` come from Home Assistant, not from semantic conventions.
+
+## Health sensors
+
+With `health_sensors` (on by default), the add-on publishes its export health in Home
+Assistant every `scrape_interval`:
+
+| Entity | State |
+|---|---|
+| `sensor.otel_collector_exported` | Log records, spans and metric points sent since the add-on started |
+| `sensor.otel_collector_dropped` | Items dropped because the queue was full |
+| `sensor.otel_collector_queue` | Fullest export queue, in percent of its 200 MB |
+| `sensor.otel_collector_status` | `error` while the queue grows and nothing is sent (backend unreachable or rejecting data), else `ok` |
+
+Use them in a dashboard or in an automation that notifies you when the status is `error`.
+They are plain states: after a Home Assistant restart they come back at the next round.
 
 ## Buffering and outages
 
