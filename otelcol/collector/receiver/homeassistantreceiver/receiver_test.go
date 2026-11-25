@@ -14,6 +14,7 @@ import (
 	"github.com/coder/websocket/wsjson"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/consumer/consumertest"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/receiver/receivertest"
@@ -384,7 +385,10 @@ func TestEventsReceiver(t *testing.T) {
 		t.Fatalf("want 1 record, got %d", n)
 	}
 	lr := sink.AllLogs()[0].ResourceLogs().At(0).ScopeLogs().At(0).LogRecords().At(0)
-	if lr.EventName() != "call_service" || lr.TraceID() != traceIDFor("01KAV3RQ5Y2G3H4J5K6M7N8P9Q", "") {
+	if lr.Body().Type() != pcommon.ValueTypeEmpty {
+		t.Error("events carry no body")
+	}
+	if lr.EventName() != "homeassistant.call_service" || lr.TraceID() != traceIDFor("01KAV3RQ5Y2G3H4J5K6M7N8P9Q", "") {
 		t.Errorf("event %q trace %s: want call_service in the run's trace", lr.EventName(), lr.TraceID())
 	}
 	if v, _ := lr.Attributes().Get("homeassistant.event.data.service_data"); v.Str() != `{"entity_id":"switch.bomba"}` {

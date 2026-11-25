@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.10.1
+
+### Changed
+
+- Event logs follow the OpenTelemetry events conventions: event name
+  `homeassistant.<event_type>` (was the bare event type), no body
+
 ## 0.10.0
 
 ### Added

@@ -114,10 +114,10 @@ func toLogs(ev haEvent) plog.Logs {
 	lr := sl.LogRecords().AppendEmpty()
 	lr.SetTimestamp(pcommon.NewTimestampFromTime(ev.TimeFired))
 	lr.SetObservedTimestamp(pcommon.NewTimestampFromTime(time.Now()))
-	lr.SetEventName(ev.EventType)
+	// OTel Events: a namespaced event name per event type, payload in attributes, no body.
+	lr.SetEventName("homeassistant." + ev.EventType)
 	lr.SetSeverityNumber(plog.SeverityNumberInfo)
 	lr.SetSeverityText("INFO")
-	lr.Body().SetStr(ev.EventType)
 	if ev.Context.ID != "" {
 		lr.SetTraceID(traceIDFor(ev.Context.ID, ev.Context.ID))
 	}

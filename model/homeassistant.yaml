@@ -221,11 +221,9 @@ groups:
         brief: Event data, one attribute per key; nested values are JSON.
         examples: ['{"entity_id":"switch.bomba"}']
 
-  - id: event.homeassistant.event
-    type: event
-    name: homeassistant.event
-    stability: development
-    brief: A Home Assistant bus event. The log record's event name is the event type and its trace id comes from the event's context id, so events caused by an automation share the run's trace.
+  - id: attributes.homeassistant.event
+    type: attribute_group
+    brief: Attributes of every Home Assistant event record.
     attributes:
       - ref: homeassistant.event.type
         requirement_level: required
@@ -240,3 +238,43 @@ groups:
       - ref: user.id
         requirement_level:
           conditionally_required: When a user caused the event.
+
+  - id: event.homeassistant.call_service
+    type: event
+    name: homeassistant.call_service
+    stability: development
+    brief: A service (action) was called.
+    note: Every Home Assistant event type is sent as `homeassistant.<event_type>`; the trace id comes from the event's context id.
+    extends: attributes.homeassistant.event
+
+  - id: event.homeassistant.automation_triggered
+    type: event
+    name: homeassistant.automation_triggered
+    stability: development
+    brief: An automation was triggered.
+    note: Every Home Assistant event type is sent as `homeassistant.<event_type>`; the trace id comes from the event's context id.
+    extends: attributes.homeassistant.event
+
+  - id: event.homeassistant.script_started
+    type: event
+    name: homeassistant.script_started
+    stability: development
+    brief: A script started.
+    note: Every Home Assistant event type is sent as `homeassistant.<event_type>`; the trace id comes from the event's context id.
+    extends: attributes.homeassistant.event
+
+  - id: event.homeassistant.homeassistant_start
+    type: event
+    name: homeassistant.homeassistant_start
+    stability: development
+    brief: Home Assistant is starting.
+    note: Every Home Assistant event type is sent as `homeassistant.<event_type>`; the trace id comes from the event's context id.
+    extends: attributes.homeassistant.event
+
+  - id: event.homeassistant.homeassistant_stop
+    type: event
+    name: homeassistant.homeassistant_stop
+    stability: development
+    brief: Home Assistant is stopping.
+    note: Every Home Assistant event type is sent as `homeassistant.<event_type>`; the trace id comes from the event's context id.
+    extends: attributes.homeassistant.event

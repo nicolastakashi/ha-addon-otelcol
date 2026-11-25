@@ -221,7 +221,9 @@ happens: `call_service`, `automation_triggered`, `script_started`, `homeassistan
 and so on. `state_changed` is left out by default because entity metrics already cover
 states; remove it from `event_logs_exclude` if you want every change.
 
-- The record's event name and body are the event type.
+- The record is an [OpenTelemetry event](https://opentelemetry.io/docs/specs/semconv/general/events/)
+  named `homeassistant.<event_type>`, for example `homeassistant.call_service`. The
+  payload is in the attributes; there is no body.
 - Its trace id comes from the event's context id, the same way a run's trace id does. The
   events an automation causes, such as its `call_service` calls, appear in that run's
   trace.
