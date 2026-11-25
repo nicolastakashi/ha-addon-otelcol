@@ -320,6 +320,8 @@ The `entity_metrics` option reads every entity state over the WebSocket API, eve
 | `homeassistant.<domain>.value` | Numeric state of other sensors, `number`, `input_number` and `counter` entities |
 | `homeassistant.<domain>.on` | `1` or `0` for entities whose state is `on` or `off`, for example `homeassistant.switch.on` |
 | `homeassistant.entity.available` | `0` when the entity is `unavailable`, else `1` |
+| `homeassistant.entity.last_updated` | Unix time (seconds) of the entity's last state update |
+| `homeassistant.core.up` | `1` when Home Assistant Core answered at this scrape, `0` when it did not. No entity attributes. Alert on it for "Home Assistant down". |
 
 Every data point carries the entity and where it is: `homeassistant.entity.id`,
 `.domain`, `.name`, `.device_class`, `.platform`, `homeassistant.device.name`,

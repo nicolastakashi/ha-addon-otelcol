@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.0
+
+### Added
+
+- Entity metrics: `homeassistant.core.up` (1 when Core answered the scrape, 0 when not)
+  and `homeassistant.entity.last_updated` (Unix seconds), the replacements for
+  Prometheus' `up` and `homeassistant_last_updated_time_seconds`
+
 ## 0.11.1
 
 ### Fixed

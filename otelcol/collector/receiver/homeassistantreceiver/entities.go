@@ -5,15 +5,17 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 )
 
 type haState struct {
-	EntityID   string         `json:"entity_id"`
-	State      string         `json:"state"`
-	Attributes map[string]any `json:"attributes"`
+	EntityID    string         `json:"entity_id"`
+	State       string         `json:"state"`
+	Attributes  map[string]any `json:"attributes"`
+	LastUpdated time.Time      `json:"last_updated"`
 }
 
 type entityEntry struct {
@@ -53,7 +55,17 @@ var numericDomains = map[string]bool{"sensor": true, "number": true, "input_numb
 //	homeassistant.<domain>.value         numeric state of other numeric entities
 //	homeassistant.<domain>.on            1/0 for on/off entities
 //	homeassistant.entity.available       0 when unavailable, else 1
-func (r *statsReceiver) entityMetrics(ctx context.Context, ms pmetric.MetricSlice, now pcommon.Timestamp) error {
+//	homeassistant.entity.last_updated    Unix seconds of the entity's last update
+//	homeassistant.core.up                1 when Core answered this scrape, else 0
+func (r *statsReceiver) entityMetrics(ctx context.Context, ms pmetric.MetricSlice, now pcommon.Timestamp) (err error) {
+	up := gauge(ms, "homeassistant.core.up", "1", "1 when Home Assistant Core answered the WebSocket API at this scrape, else 0.")
+	defer func() {
+		v := 1.0
+		if err != nil {
+			v = 0
+		}
+		add(up, now, pcommon.NewMap(), v)
+	}()
 	c, err := dial(ctx, r.cfg.Endpoint, string(r.cfg.Token))
 	if err != nil {
 		return err
@@ -137,6 +149,9 @@ func (r *statsReceiver) entityMetrics(ctx context.Context, ms pmetric.MetricSlic
 			available = 0
 		}
 		add(get("homeassistant.entity.available", "1"), now, attrs, available)
+		if !s.LastUpdated.IsZero() {
+			add(get("homeassistant.entity.last_updated", "s"), now, attrs, float64(s.LastUpdated.UnixNano())/1e9)
+		}
 
 		switch {
 		case s.State == "on" || s.State == "off":

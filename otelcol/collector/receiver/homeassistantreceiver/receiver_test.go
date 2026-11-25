@@ -184,7 +184,7 @@ func fakeHA(t *testing.T, runs *runList) *httptest.Server {
 				}
 			case "get_states":
 				result = json.RawMessage(`[
-					{"entity_id": "sensor.sala_temp", "state": "21.5", "attributes": {"device_class": "temperature", "unit_of_measurement": "°C", "friendly_name": "Sala"}},
+					{"entity_id": "sensor.sala_temp", "state": "21.5", "last_updated": "2026-11-25T10:00:00+00:00", "attributes": {"device_class": "temperature", "unit_of_measurement": "°C", "friendly_name": "Sala"}},
 					{"entity_id": "switch.bomba", "state": "on", "attributes": {}},
 					{"entity_id": "sensor.texto", "state": "abc", "attributes": {}},
 					{"entity_id": "sensor.morto", "state": "unavailable", "attributes": {"device_class": "power"}},
@@ -363,6 +363,23 @@ func TestEntityMetrics(t *testing.T) {
 	}
 	if _, ok := got["homeassistant.sensor.power"]; ok {
 		t.Error("unavailable sensor must not produce a value")
+	}
+	if v := got["homeassistant.core.up"].Gauge().DataPoints().At(0).DoubleValue(); v != 1 {
+		t.Errorf("core.up = %v", v)
+	}
+	if v := got["homeassistant.entity.last_updated"].Gauge().DataPoints().At(0).DoubleValue(); v != 1795600800 {
+		t.Errorf("last_updated = %v", v)
+	}
+
+	// Core down: the scrape still reports core.up = 0.
+	srv.Close()
+	md, err = r.scrape(context.Background())
+	if err == nil {
+		t.Fatal("want an error with Core down")
+	}
+	m := md.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0)
+	if m.Name() != "homeassistant.core.up" || m.Gauge().DataPoints().At(0).DoubleValue() != 0 {
+		t.Errorf("Core down: %s = %v", m.Name(), m.Gauge().DataPoints().At(0).DoubleValue())
 	}
 }
 

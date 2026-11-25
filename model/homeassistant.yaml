@@ -200,6 +200,27 @@ groups:
       - ref: homeassistant.floor.name
         requirement_level: recommended
 
+  - id: metric.homeassistant.entity.last_updated
+    type: metric
+    metric_name: homeassistant.entity.last_updated
+    instrument: gauge
+    unit: s
+    stability: development
+    brief: Unix time of the entity's last state update.
+    attributes:
+      - ref: homeassistant.entity.id
+        requirement_level: required
+      - ref: homeassistant.entity.domain
+        requirement_level: required
+
+  - id: metric.homeassistant.core.up
+    type: metric
+    metric_name: homeassistant.core.up
+    instrument: gauge
+    unit: "1"
+    stability: development
+    brief: 1 when Home Assistant Core answered the WebSocket API at this scrape, else 0.
+
   - id: registry.homeassistant.event
     type: attribute_group
     display_name: Home Assistant event attributes
