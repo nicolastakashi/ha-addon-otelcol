@@ -47,13 +47,8 @@ Every other option has a default. All signals except `profiles` are on by defaul
 
 ## Choose a backend
 
-Any backend that accepts OTLP over HTTP (`http/protobuf`) and authenticates with a header
-works. The docs have examples for:
-
-- [Dash0](https://www.dash0.com/)
-- [Grafana Cloud](https://grafana.com/products/cloud/) (OTLP gateway)
-- [Honeycomb](https://www.honeycomb.io/)
-- A self-hosted collector or backend on your network, without authentication
+Any OpenTelemetry-compatible backend works: any vendor or self-hosted tool that accepts
+OTLP over HTTP (`http/protobuf`). Authentication goes in `otlp_headers`.
 
 OTLP profiles are alpha. Check that your backend accepts them before you enable `profiles`.
 
@@ -126,7 +121,7 @@ CI checks the registry:
 weaver registry check -r model --future
 ```
 
-To package it for a backend that accepts Weaver registries (Dash0 does):
+To package it for a backend that accepts Weaver registries:
 
 ```sh
 weaver registry package -r model --future --v2 -o <dir> --resolved-schema-uri <uri>

@@ -32,7 +32,7 @@ Home Assistant.
 | OpenTelemetry (OTel) | An open standard for logs, metrics, traces and profiles. |
 | Collector | A program that receives, processes and exports telemetry. This add-on runs one, called `otelcol-ha`. |
 | OTLP | The OpenTelemetry protocol. The add-on sends OTLP over HTTP (`http/protobuf`). |
-| Backend | The service that stores and shows your data, for example Dash0, Grafana Cloud or Honeycomb. |
+| Backend | The service that stores and shows your data: any vendor or self-hosted tool that accepts OTLP. |
 | Trace, span | A trace is one operation, such as one automation run. It is made of spans: one per step. |
 | Resource attribute | A key/value pair that describes the source of the data, such as `host.name`. It is set on every signal. |
 | Semantic conventions (semconv) | The standard OpenTelemetry attribute names, such as `container.name`. |
@@ -66,41 +66,20 @@ Any backend that accepts OTLP/HTTP and authenticates with a request header works
 base URL in `otlp_endpoint`. The exporter appends the signal path (`/v1/logs`,
 `/v1/metrics`, `/v1/traces`) itself, so do not include it.
 
-### Send data to Dash0
+### Send data to a vendor
+
+Your vendor's OTLP documentation gives the endpoint and the auth header. Most use a bearer
+token or an API key header:
 
 ```yaml
-otlp_endpoint: https://ingress.eu-west-1.aws.dash0.com
+otlp_endpoint: https://otlp.example.com
 otlp_headers:
   - name: Authorization
-    value: Bearer auth_xxxxxxxx
-  - name: Dash0-Dataset
-    value: default
+    value: Bearer <your-token>
 ```
 
-`Dash0-Dataset` is optional. Use the ingress URL of your Dash0 region.
-
-### Send data to Grafana Cloud
-
-Grafana Cloud uses basic auth. The value is the base64 encoding of
-`<instance-id>:<token>`.
-
-```yaml
-otlp_endpoint: https://otlp-gateway-prod-eu-west-2.grafana.net/otlp
-otlp_headers:
-  - name: Authorization
-    value: Basic <base64-of-instance-id-and-token>
-```
-
-Use the OTLP gateway URL of your Grafana Cloud stack.
-
-### Send data to Honeycomb
-
-```yaml
-otlp_endpoint: https://api.honeycomb.io
-otlp_headers:
-  - name: x-honeycomb-team
-    value: <your-api-key>
-```
+Add more headers the same way if your vendor needs them, for example a dataset or tenant
+header.
 
 ### Send data to a collector on your network
 
@@ -521,8 +500,8 @@ outages"). Check:
 
 ### Why only OTLP/HTTP?
 
-The collector includes one exporter, OTLP/HTTP. All the backends in this guide accept it,
-and one exporter keeps the build and the configuration small. gRPC is not included.
+The collector includes one exporter, OTLP/HTTP. Most OTLP backends accept it, and one
+exporter keeps the build and the configuration small. gRPC is not included.
 
 ### Why not eBPF profiling?
 
