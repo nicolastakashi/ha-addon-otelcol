@@ -63,10 +63,28 @@ OTLP profiles are alpha. Check that your backend accepts them before you enable 
 
 ```mermaid
 flowchart LR
-  J[System journal] --> A
-  H[Home Assistant] --> A
-  M[Host] --> A
-  A[OTel Collector add-on] -- OTLP/HTTP --> B[Your backend]
+  subgraph HAOS["Home Assistant OS"]
+    J[(systemd journal)]
+    S[Supervisor proxy]
+    C[Home Assistant Core]
+    P[otel_profiler integration]
+    subgraph A["otelcol add-on (otelcol-ha)"]
+      RJ[journald receiver]
+      RH[homeassistant receiver]
+      RP[prometheus receiver]
+      RM[hostmetrics receiver]
+      RF[pprof receiver]
+      Q[(persistent queue in /data)]
+      E[otlp_http exporter]
+    end
+  end
+  J --> RJ
+  C -- WebSocket trace store --> S --> RH
+  C -- /api/prometheus --> S --> RP
+  H[(/proc and /sys)] --> RM
+  P -- pprof 127.0.0.1:4040 --> RF
+  RJ & RH & RP & RM & RF --> Q --> E
+  E -- OTLP/HTTP --> B[(Your backend)]
 ```
 
 While the backend is unreachable, data waits in a queue on disk and is sent when it comes
