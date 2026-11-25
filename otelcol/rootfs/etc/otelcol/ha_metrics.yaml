@@ -28,4 +28,4 @@ service:
     metrics/prometheus:
       receivers: [prometheus/homeassistant]
       processors: [resource/prometheus, resource/core, resource]
-      exporters: [otlp_http]
+      exporters: ["${env:OTLP_EXPORTER}"]

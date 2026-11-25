@@ -29,8 +29,9 @@ processors:
           - set(attributes["service.version"], "${env:HA_VERSION}") where attributes["container.name"] == "homeassistant" and "${env:HA_VERSION}" != ""
     metric_statements: *service_statements
 
+# run.sh picks one with OTLP_EXPORTER (otlp_protocol option): otlp_http or otlp_grpc.
 exporters:
-  otlp_http:
+  otlp_http: &exporter
     endpoint: "${env:OTLP_ENDPOINT}"
     retry_on_failure:
       enabled: true
@@ -44,6 +45,7 @@ exporters:
       # ponytail: fixed 200 MB cap on disk; make it an option if someone needs more.
       queue_size: 200000000
       batch: {}
+  otlp_grpc: *exporter
 
 service:
   extensions: [file_storage]

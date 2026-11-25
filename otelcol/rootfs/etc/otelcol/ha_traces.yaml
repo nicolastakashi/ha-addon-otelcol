@@ -12,4 +12,4 @@ service:
     traces:
       receivers: [homeassistant]
       processors: [resource/core, resource]
-      exporters: [otlp_http]
+      exporters: ["${env:OTLP_EXPORTER}"]

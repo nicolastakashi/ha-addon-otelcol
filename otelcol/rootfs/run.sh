@@ -16,6 +16,18 @@ fi
 
 # Assign, then export: `export X="$(cmd)"` would hide a jq failure.
 OTLP_ENDPOINT="$endpoint"
+case "$(opt '.otlp_protocol // "http"')" in
+  grpc) OTLP_EXPORTER=otlp_grpc ;;
+  *)    OTLP_EXPORTER=otlp_http ;;
+esac
+ca_file="$(opt '.otlp_ca_file // ""')"
+if [ -n "$ca_file" ]; then
+  case "$ca_file" in /*) ;; *) ca_file="/ssl/$ca_file" ;; esac
+  if [ ! -r "$ca_file" ]; then
+    echo "[otelcol] otlp_ca_file $ca_file is not readable: put the CA certificate in the Home Assistant ssl folder." >&2
+    exit 1
+  fi
+fi
 SERVICE_NAME="$(opt .service_name)"
 DEPLOYMENT_ENVIRONMENT="$(opt .deployment_environment)"
 SCRAPE_INTERVAL="$(opt .scrape_interval)"
@@ -29,7 +41,7 @@ case "$(opt '.logs_min_severity // "info"')" in
   *)     LOGS_MIN_SEVERITY_NUMBER=9 ;;
 esac
 SUPERVISOR_TOKEN="${SUPERVISOR_TOKEN:-}"
-export OTLP_ENDPOINT SERVICE_NAME DEPLOYMENT_ENVIRONMENT SCRAPE_INTERVAL \
+export OTLP_ENDPOINT OTLP_EXPORTER SERVICE_NAME DEPLOYMENT_ENVIRONMENT SCRAPE_INTERVAL \
        LOGS_MIN_PRIORITY LOGS_MIN_SEVERITY_NUMBER SUPERVISOR_TOKEN
 
 mkdir -p /data/storage
@@ -73,7 +85,7 @@ esac
 HA_VERSION="$ha_version"; OS_VERSION="$os_version"
 export HA_VERSION OS_VERSION
 jq --arg host "$HOST_NAME" --arg ver "$ha_version" --arg osver "$os_version" \
-   --arg os "$os_description" --arg arch "$arch" '
+   --arg os "$os_description" --arg arch "$arch" --arg ca "$ca_file" '
   def esc: tostring | gsub("\\$"; "$$");
   def attr(k; v): {key: k, value: (v | esc), action: "upsert"};
   def opt(k; v): if v != "" then [attr(k; v)] else [] end;
@@ -95,7 +107,14 @@ jq --arg host "$HOST_NAME" --arg ver "$ha_version" --arg osver "$os_version" \
       )},
       "resource/haos": {attributes: ([attr("service.name"; "haos")] + opt("service.version"; $osver))}
     },
-    exporters: {otlp_http: {headers: ((.otlp_headers // []) | map({(.name): (.value | esc)}) | add // {})}}
+    exporters: (
+      {headers: ((.otlp_headers // []) | map({(.name): (.value | esc)}) | add // {}),
+       # An http:// endpoint means plaintext; with a tls block the gRPC exporter would
+       # otherwise try TLS.
+       tls: ({insecure: (.otlp_endpoint | startswith("http://")),
+              insecure_skip_verify: (.otlp_tls_insecure_skip_verify // false)}
+             + (if $ca != "" then {ca_file: $ca} else {} end))}
+      | {otlp_http: ., otlp_grpc: .})
   }' "$OPTS" > /tmp/generated.yaml
 
 args="--config $CONF/base.yaml --config /tmp/generated.yaml"

@@ -2,9 +2,18 @@ configuration:
   otlp_endpoint:
     name: OTLP endpoint
     description: Base OTLP/HTTP URL of your backend, without a signal path, e.g. https://otlp.example.com or http://192.0.2.10:4318. Required.
+  otlp_protocol:
+    name: OTLP protocol
+    description: http (OTLP/HTTP, port 4318 by default) or grpc (OTLP/gRPC, port 4317 by default).
   otlp_headers:
     name: OTLP headers
     description: Request headers sent to the backend, usually the auth token (e.g. Authorization). Values are hidden here but stored in plain text in backups.
+  otlp_tls_insecure_skip_verify:
+    name: Skip TLS verification
+    description: Accept any server certificate (self-signed). Only for testing; prefer a CA file.
+  otlp_ca_file:
+    name: CA certificate file
+    description: A CA certificate in the Home Assistant ssl folder to trust, e.g. my-ca.pem.
   service_name:
     name: service.name
     description: service.name of Home Assistant Core and service.namespace of every signal (the Supervisor, add-ons and the host get their own service.name).

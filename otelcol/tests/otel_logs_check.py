@@ -20,6 +20,16 @@ assert exp.root_span_hex("r2") == "b776e93913114424"
 import hashlib
 assert hashlib.sha256(b"r2").hexdigest()[:32] == "db77fd01af957221a4989b64b3770a83"  # Go fallback
 
+import datetime
+utc = datetime.timezone.utc
+for ts, want in [
+    (datetime.datetime(2026, 11, 24, 21, 5, 0, 150000, tzinfo=utc), "c746aac95ddaaed2"),
+    (datetime.datetime(2026, 11, 24, 21, 5, 0, 0, tzinfo=utc), "42889a80d3434706"),
+    (datetime.datetime(2026, 11, 24, 21, 5, 0, 123456, tzinfo=utc), "5e1eaeb9ef27a426"),
+]:
+    got = exp.step_span_hex("r2", "action/0", ts)
+    assert got == want, (ts, got, want)  # spanIDFor("r2", "action/0#"+RFC3339Nano) in Go
+
 try:
     raise ValueError("boom")
 except ValueError:

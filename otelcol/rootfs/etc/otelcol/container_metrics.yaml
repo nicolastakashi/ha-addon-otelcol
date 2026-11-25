@@ -14,4 +14,4 @@ service:
     metrics/ha_entities_containers:
       receivers: [homeassistant]
       processors: [transform/service, resource]
-      exporters: [otlp_http]
+      exporters: ["${env:OTLP_EXPORTER}"]

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.16.0
+
+### Added
+
+- `otlp_protocol` (`http` or `grpc`), `otlp_ca_file` (a CA certificate in the Home
+  Assistant `ssl` folder) and `otlp_tls_insecure_skip_verify` options
+- Core logs (`core_logs`) are linked to the exact step span of the automation or script
+  run that wrote them, not only to the run's root span
+
 ## 0.15.0
 
 ### Added

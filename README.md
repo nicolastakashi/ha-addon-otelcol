@@ -3,7 +3,7 @@
 ![Builder](https://github.com/nicolastakashi/ha-addon-otelcol/actions/workflows/builder.yaml/badge.svg)
 
 A community Home Assistant add-on that runs a custom build of the OpenTelemetry Collector on
-Home Assistant OS and sends logs, traces, metrics and profiles to any [OTLP](https://opentelemetry.io/docs/specs/otlp/)/HTTP backend.
+Home Assistant OS and sends logs, traces, metrics and profiles to any [OTLP](https://opentelemetry.io/docs/specs/otlp/) backend.
 
 | Signal | Option | Source |
 |---|---|---|
@@ -48,7 +48,7 @@ Every other option has a default. All signals except `profiles` are on by defaul
 ## Choose a backend
 
 Any OpenTelemetry-compatible backend works: any vendor or self-hosted tool that accepts
-OTLP over HTTP (`http/protobuf`). Authentication goes in `otlp_headers`.
+OTLP over HTTP or gRPC, with your own CA if needed. Authentication goes in `otlp_headers`.
 
 OTLP profiles are alpha. Check that your backend accepts them before you enable `profiles`.
 
@@ -83,7 +83,7 @@ flowchart LR
   H[(/proc and /sys)] --> RM
   P -- pprof 127.0.0.1:4040 --> RF
   RJ & RH & RP & RM & RF --> Q --> E
-  E -- OTLP/HTTP --> B[(Your backend)]
+  E -- OTLP HTTP or gRPC --> B[(Your backend)]
 ```
 
 While the backend is unreachable, data waits in a queue on disk and is sent when it comes

@@ -20,4 +20,4 @@ service:
     logs/core:
       receivers: [otlp/local]
       processors: [filter/core_logs, resource/core, resource]
-      exporters: [otlp_http]
+      exporters: ["${env:OTLP_EXPORTER}"]

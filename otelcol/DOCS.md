@@ -2,7 +2,7 @@
 
 This add-on runs an OpenTelemetry Collector inside Home Assistant OS. It collects logs,
 automation traces, metrics and, optionally, profiles, and sends them to an observability
-backend over OTLP/HTTP.
+backend over OTLP (HTTP or gRPC).
 
 This is a community add-on. It is not affiliated with the OpenTelemetry project or with
 Home Assistant.
@@ -58,7 +58,7 @@ first start.
 
 ## Send data to your backend
 
-Any backend that accepts OTLP/HTTP and authenticates with a request header works. Set the
+Any backend that accepts OTLP (HTTP or gRPC) and authenticates with a request header works. Set the
 base URL in `otlp_endpoint`. The exporter appends the signal path (`/v1/logs`,
 `/v1/metrics`, `/v1/traces`) itself, so do not include it.
 
@@ -84,13 +84,35 @@ otlp_endpoint: http://192.0.2.10:4318
 otlp_headers: []
 ```
 
+### Use OTLP/gRPC
+
+```yaml
+otlp_protocol: grpc
+otlp_endpoint: http://192.0.2.10:4317
+```
+
+An `http://` endpoint is plaintext; use `https://` for TLS.
+
+### Trust a custom CA or a self-signed certificate
+
+Put the CA certificate in the Home Assistant `ssl` folder and set:
+
+```yaml
+otlp_endpoint: https://otel.example.lan:4318
+otlp_ca_file: my-ca.pem
+```
+
+For a quick test only, `otlp_tls_insecure_skip_verify: true` accepts any certificate.
+
 ## Configuration reference
 
 The options as they appear in YAML mode, with their defaults:
 
 ```yaml
 otlp_endpoint: ""
+otlp_protocol: http
 otlp_headers: []
+otlp_tls_insecure_skip_verify: false
 service_name: homeassistant
 deployment_environment: home
 resource_attributes: []
@@ -119,7 +141,10 @@ scrape_interval: 60s
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `otlp_endpoint` | string | none (required) | Base OTLP/HTTP URL of your backend. The add-on does not start without it. Credentials in the URL (`https://user:pass@host`) are masked in the log. |
+| `otlp_endpoint` | string | none (required) | Base URL of your backend (OTLP/HTTP, or OTLP/gRPC with `otlp_protocol: grpc`). The add-on does not start without it. Credentials in the URL (`https://user:pass@host`) are masked in the log. |
+| `otlp_protocol` | `http` or `grpc` | `http` | OTLP/HTTP (`http/protobuf`) or OTLP/gRPC. |
+| `otlp_tls_insecure_skip_verify` | bool | `false` | Accept any server certificate. Testing only. |
+| `otlp_ca_file` | string, optional | not set | CA certificate in the Home Assistant `ssl` folder to trust, for example `my-ca.pem`. |
 | `otlp_headers` | list of `name`/`value` | `[]` | Request headers, usually the auth token. Values are hidden in the UI and never printed in the log. |
 
 ### Resource options
@@ -236,7 +261,8 @@ the journal line:
 - An exception becomes `exception.type`, `exception.message` and `exception.stacktrace` on
   the same record.
 - A record written while an automation or script runs carries that run's trace id and the
-  id of its root span, so your backend shows the log inside the run's trace.
+  id of the step being executed (the root span outside a step), so your backend shows the
+  log under the exact step of the run's trace.
 
 The journal copy of Home Assistant Core's lines is dropped while `core_logs` is on, so
 nothing arrives twice. Records follow your `logger:` levels and `logs_min_severity`.
@@ -574,7 +600,9 @@ outages"). Check:
 
 - `otlp_endpoint` has the right scheme (`https://` or `http://`) and no signal path.
 - The auth header name and value. A 401 or 403 from the backend means the token is wrong.
-- The backend's OTLP/HTTP port. A self-hosted collector usually listens on 4318.
+- The backend's port and `otlp_protocol`. A self-hosted collector usually listens on 4318
+  (HTTP) and 4317 (gRPC).
+- With your own CA, `otlp_ca_file` must name a file in the Home Assistant `ssl` folder.
 
 ## Privacy and security
 
@@ -598,15 +626,9 @@ files, reads of the journal, `/proc` and `/sys`, and writes only to `/data`, `/t
 
 ## Known limitations
 
-- OTLP/HTTP only. No gRPC, no custom CA certificates.
 - Profiles are experimental and cover Python frames only.
 
 ## FAQ
-
-### Why only OTLP/HTTP?
-
-The collector includes one exporter, OTLP/HTTP. Most OTLP backends accept it, and one
-exporter keeps the build and the configuration small. gRPC is not included.
 
 ### Why not eBPF profiling?
 

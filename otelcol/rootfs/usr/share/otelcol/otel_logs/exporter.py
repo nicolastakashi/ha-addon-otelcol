@@ -12,6 +12,7 @@ import threading
 import time
 import traceback
 import urllib.request
+from datetime import timezone
 
 _LOGGER = logging.getLogger(__package__)
 _CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
@@ -36,10 +37,23 @@ def root_span_hex(run_id: str) -> str:
     return hashlib.sha256(f"{run_id}/root".encode()).hexdigest()[:16]
 
 
+def go_rfc3339nano(ts) -> str:
+    """A UTC datetime formatted like Go's time.RFC3339Nano (trailing zeros trimmed, "Z")."""
+    ts = ts.astimezone(timezone.utc)
+    frac = f".{ts.microsecond:06d}".rstrip("0") if ts.microsecond else ""
+    return ts.strftime("%Y-%m-%dT%H:%M:%S") + frac + "Z"
+
+
+def step_span_hex(run_id: str, path: str, started) -> str:
+    """The span id the add-on gives a step: sha256("<run_id>/<path>#<start RFC3339Nano>")[:8]."""
+    return hashlib.sha256(f"{run_id}/{path}#{go_rfc3339nano(started)}".encode()).hexdigest()[:16]
+
+
 def trace_context(hass) -> tuple[str, str] | None:
-    """(trace id, root span id) of the automation/script run this code runs in, if any."""
+    """(trace id, span id) of the automation/script run this code runs in, if any: the span
+    of the step being executed, else the run's root span."""
     try:
-        from homeassistant.helpers.trace import trace_id_get
+        from homeassistant.helpers.trace import trace_id_get, trace_stack_cv, trace_stack_top
 
         key_run = trace_id_get()
         if not key_run:
@@ -50,6 +64,10 @@ def trace_context(hass) -> tuple[str, str] | None:
         trace_id = ulid_hex(getattr(context, "id", "") or "")
         if trace_id is None:  # same fallback as the add-on: a hash of the run id
             trace_id = hashlib.sha256(run_id.encode()).hexdigest()[:32]
+        step = trace_stack_top(trace_stack_cv)
+        started = getattr(step, "_timestamp", None)
+        if step is not None and started is not None and getattr(step, "path", None):
+            return trace_id, step_span_hex(run_id, step.path, started)
         return trace_id, root_span_hex(run_id)
     except Exception:  # noqa: BLE001 - private API; logging must never break
         return None

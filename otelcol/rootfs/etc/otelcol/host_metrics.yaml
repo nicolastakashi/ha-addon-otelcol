@@ -32,4 +32,4 @@ service:
     metrics/host:
       receivers: [host_metrics]
       processors: [resource/haos, resource]
-      exporters: [otlp_http]
+      exporters: ["${env:OTLP_EXPORTER}"]

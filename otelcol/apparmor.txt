@@ -26,6 +26,10 @@ profile otelcol flags=(attach_disconnected,mediate_deleted) {
   /usr/share/** r,
   /run.sh rix,
 
+  # otlp_ca_file: custom CA certificates (ssl folder, read-only)
+  /ssl/ r,
+  /ssl/** r,
+
   # Add-on data: options, journald cursor and export queue
   /data/** rwk,
   /tmp/** rwk,

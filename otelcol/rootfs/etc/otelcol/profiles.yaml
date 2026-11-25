@@ -18,4 +18,4 @@ service:
     profiles:
       receivers: [pprof, otlp/local]
       processors: [resource/core, resource]
-      exporters: [otlp_http]
+      exporters: ["${env:OTLP_EXPORTER}"]

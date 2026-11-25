@@ -1,5 +1,5 @@
 name: OTel Collector (community)
-version: "0.15.0"
+version: "0.16.0"
 slug: otelcol
 description: Community add-on with a purpose-built OpenTelemetry Collector that ships HAOS logs, automation traces, Home Assistant metrics and host metrics over OTLP. Not affiliated with the OpenTelemetry project.
 url: https://github.com/nicolastakashi/ha-addon-otelcol
@@ -24,9 +24,14 @@ host_network: true
 map:
   - type: homeassistant_config
     read_only: false
+  # otlp_ca_file: a custom CA certificate from the Home Assistant ssl folder.
+  - type: ssl
+    read_only: true
 options:
   otlp_endpoint: ""
+  otlp_protocol: http
   otlp_headers: []
+  otlp_tls_insecure_skip_verify: false
   service_name: homeassistant
   deployment_environment: home
   resource_attributes: []
@@ -50,9 +55,12 @@ options:
   scrape_interval: 60s
 schema:
   otlp_endpoint: str
+  otlp_protocol: list(http|grpc)
   otlp_headers:
     - name: str
       value: password
+  otlp_tls_insecure_skip_verify: bool
+  otlp_ca_file: str?
   service_name: str
   service_instance_id: str?
   deployment_environment: str
