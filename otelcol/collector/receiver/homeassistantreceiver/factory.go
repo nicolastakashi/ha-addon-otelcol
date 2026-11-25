@@ -1,5 +1,6 @@
 // Package homeassistantreceiver turns Home Assistant automation and script
-// runs (the trace store behind Settings > Automations > Traces) into OTLP traces.
+// runs (the trace store behind Settings > Automations > Traces) into OTLP traces, and
+// reads container resource usage from the Supervisor as metrics.
 package homeassistantreceiver
 
 import (
@@ -19,6 +20,7 @@ func NewFactory() receiver.Factory {
 		componentType,
 		createDefaultConfig,
 		receiver.WithTraces(createTraces, component.StabilityLevelDevelopment),
+		receiver.WithMetrics(createMetrics, component.StabilityLevelDevelopment),
 	)
 }
 
@@ -27,9 +29,16 @@ func createDefaultConfig() component.Config {
 		Endpoint:     "ws://supervisor/core/websocket",
 		PollInterval: 10 * time.Second,
 		Domains:      []string{"automation", "script"},
+
+		SupervisorEndpoint: "http://supervisor",
+		CollectionInterval: 60 * time.Second,
 	}
 }
 
 func createTraces(_ context.Context, set receiver.Settings, cfg component.Config, next consumer.Traces) (receiver.Traces, error) {
 	return newReceiver(set, cfg.(*Config), next), nil
+}
+
+func createMetrics(_ context.Context, set receiver.Settings, cfg component.Config, next consumer.Metrics) (receiver.Metrics, error) {
+	return newStatsReceiver(set, cfg.(*Config), next), nil
 }

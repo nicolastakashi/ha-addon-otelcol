@@ -26,6 +26,9 @@ configuration:
   logs_min_severity:
     name: Minimum severity
     description: Drop log records below this severity, after parsing. Use this to reduce log volume.
+  logs_multiline:
+    name: Join tracebacks
+    description: Send a Python traceback from a container as one log record instead of one per line.
   logs_parse:
     name: Parse log lines
     description: Turn JSON and Python log lines into attributes (thread.name, python.logger.name) and keep only the message as body.
@@ -38,6 +41,9 @@ configuration:
   host_metrics:
     name: Host metrics
     description: CPU, memory, load, paging, network, data disk and uptime of the machine.
+  container_metrics:
+    name: Container metrics
+    description: CPU, memory, disk and network of Home Assistant Core, the Supervisor and every started add-on.
   profiles:
     name: Profiles (experimental)
     description: Install the bundled OTel Profiler integration and send profiles of Home Assistant. Restart Home Assistant once after enabling. Needs a backend that accepts OTLP profiles.

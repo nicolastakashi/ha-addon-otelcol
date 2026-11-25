@@ -1,0 +1,13 @@
+# CPU, memory, disk and network of Core, the Supervisor and every started add-on, read
+# from the Supervisor (needs hassio_role: manager). Same receiver as ha_traces.
+receivers:
+  homeassistant:
+    token: "${env:SUPERVISOR_TOKEN}"
+    collection_interval: "${env:SCRAPE_INTERVAL}"
+
+service:
+  pipelines:
+    metrics/containers:
+      receivers: [homeassistant]
+      processors: [resource]
+      exporters: [otlp_http]

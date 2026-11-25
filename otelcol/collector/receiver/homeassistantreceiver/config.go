@@ -19,6 +19,10 @@ type Config struct {
 	PollInterval time.Duration `mapstructure:"poll_interval"`
 	// Domains whose run traces are collected.
 	Domains []string `mapstructure:"domains"`
+	// SupervisorEndpoint is the Supervisor REST API, used for container metrics.
+	SupervisorEndpoint string `mapstructure:"supervisor_endpoint"`
+	// CollectionInterval is how often container metrics are read.
+	CollectionInterval time.Duration `mapstructure:"collection_interval"`
 }
 
 // Validate checks the configuration.
@@ -32,6 +36,9 @@ func (c *Config) Validate() error {
 	}
 	if c.PollInterval <= 0 {
 		errs = append(errs, errors.New("poll_interval must be positive"))
+	}
+	if c.CollectionInterval <= 0 {
+		errs = append(errs, errors.New("collection_interval must be positive"))
 	}
 	if len(c.Domains) == 0 {
 		errs = append(errs, errors.New("domains must not be empty"))

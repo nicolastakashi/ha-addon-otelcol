@@ -1,5 +1,5 @@
 name: OTel Collector (community)
-version: "0.7.0"
+version: "0.8.0"
 slug: otelcol
 description: Community add-on with a purpose-built OpenTelemetry Collector that ships HAOS logs, automation traces, Home Assistant metrics and host metrics over OTLP. Not affiliated with the OpenTelemetry project.
 url: https://github.com/nicolastakashi/ha-addon-otelcol
@@ -16,6 +16,8 @@ journald: true
 homeassistant_api: true
 # hassio_api: read the machine host name (/host/info) for host.name.
 hassio_api: true
+# manager: read the resource usage of Core, the Supervisor and add-ons (container_metrics).
+hassio_role: manager
 # host_network: hostmetrics sees the real network interfaces.
 host_network: true
 # homeassistant_config: profiles installs the bundled otel_profiler integration into custom_components.
@@ -31,10 +33,12 @@ options:
   logs: true
   logs_min_priority: info
   logs_min_severity: info
+  logs_multiline: true
   logs_parse: false
   ha_metrics: true
   ha_traces: true
   host_metrics: true
+  container_metrics: true
   profiles: false
   scrape_interval: 60s
 schema:
@@ -51,9 +55,11 @@ schema:
   logs: bool
   logs_min_priority: list(emerg|alert|crit|err|warning|notice|info|debug)
   logs_min_severity: list(debug|info|warn|error|fatal)
+  logs_multiline: bool
   logs_parse: bool
   ha_metrics: bool
   ha_traces: bool
   host_metrics: bool
+  container_metrics: bool
   profiles: bool
   scrape_interval: match(^[1-9][0-9]*(s|m)$)

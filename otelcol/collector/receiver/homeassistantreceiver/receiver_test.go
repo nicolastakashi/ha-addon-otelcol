@@ -261,3 +261,41 @@ func TestPollKeepsListedRunsForgetsGoneOnes(t *testing.T) {
 		t.Fatal("forgot a listed run")
 	}
 }
+
+func TestStatsReceiver(t *testing.T) {
+	sup := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer secret" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		stats := `{"data": {"cpu_percent": 150, "memory_usage": 1000, "network_rx": 1, "network_tx": 2, "blk_read": 3, "blk_write": 4}}`
+		switch r.URL.Path {
+		case "/addons":
+			_, _ = w.Write([]byte(`{"data": {"addons": [{"slug": "core_ssh", "state": "started"}, {"slug": "off", "state": "stopped"}]}}`))
+		case "/core/stats", "/supervisor/stats", "/addons/core_ssh/stats":
+			_, _ = w.Write([]byte(stats))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer sup.Close()
+	cfg := createDefaultConfig().(*Config)
+	cfg.SupervisorEndpoint, cfg.Token = sup.URL, "secret"
+	sink := new(consumertest.MetricsSink)
+	r := newStatsReceiver(receivertest.NewNopSettings(componentType), cfg, sink)
+	md, err := r.scrape(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ms := md.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics()
+	if ms.At(0).Name() != "container.cpu.usage" || ms.At(0).Gauge().DataPoints().Len() != 3 {
+		t.Fatalf("want cpu for core, supervisor and the started add-on, got %d", ms.At(0).Gauge().DataPoints().Len())
+	}
+	dp := ms.At(0).Gauge().DataPoints().At(2)
+	if v, _ := dp.Attributes().Get("container.name"); v.Str() != "addon_core_ssh" || dp.DoubleValue() != 1.5 {
+		t.Errorf("add-on cpu point: %s %v", v.Str(), dp.DoubleValue())
+	}
+	if n := ms.At(3).Sum().DataPoints().Len(); ms.At(3).Name() != "container.network.io" || n != 6 {
+		t.Errorf("network.io points: %d", n)
+	}
+}

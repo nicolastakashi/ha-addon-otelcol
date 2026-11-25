@@ -83,6 +83,9 @@ args="--config $CONF/base.yaml --config /tmp/generated.yaml"
 features=""
 if [ "$(opt .logs)" = "true" ]; then
   args="$args --config $CONF/logs.yaml"; features="$features logs"
+  if [ "$(opt 'if .logs_multiline == null then true else .logs_multiline end')" = "true" ]; then
+    args="$args --config $CONF/logs_multiline.yaml"; features="$features logs_multiline"
+  fi
   if [ "$(opt .logs_parse)" = "true" ]; then
     args="$args --config $CONF/logs_parse.yaml"; features="$features logs_parse"
   fi
@@ -95,6 +98,9 @@ if [ "$(opt 'if .ha_traces == null then true else .ha_traces end')" = "true" ]; 
 fi
 if [ "$(opt .host_metrics)" = "true" ]; then
   args="$args --config $CONF/host_metrics.yaml"; features="$features host_metrics"
+fi
+if [ "$(opt 'if .container_metrics == null then true else .container_metrics end')" = "true" ]; then
+  args="$args --config $CONF/container_metrics.yaml"; features="$features container_metrics"
 fi
 
 # Profiles producer: the add-on ships the otel_profiler integration and installs it into

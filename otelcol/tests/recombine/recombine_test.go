@@ -1,4 +1,4 @@
-// Checks the journald recombine operator in rootfs/etc/otelcol/logs.yaml: a Python
+// Checks the journald recombine operator in rootfs/etc/otelcol/logs_multiline.yaml: a Python
 // traceback becomes one record; host lines and other containers are never joined.
 package recombinecheck
 
@@ -16,7 +16,7 @@ import (
 )
 
 func TestTraceback(t *testing.T) {
-	raw, _ := os.ReadFile("../../rootfs/etc/otelcol/logs.yaml")
+	raw, _ := os.ReadFile("../../rootfs/etc/otelcol/logs_multiline.yaml")
 	var c struct {
 		Receivers struct {
 			Journald struct {
@@ -33,7 +33,7 @@ func TestTraceback(t *testing.T) {
 	o := c.Receivers.Journald.Operators[0]
 	cfg := recombine.NewConfig()
 	cfg.CombineField = entry.NewBodyField("MESSAGE")
-	cfg.SourceIdentifier = entry.NewBodyField("CONTAINER_NAME")
+	cfg.SourceIdentifier = entry.NewBodyField("SYSLOG_IDENTIFIER")
 	cfg.IsFirstEntry = o.IsFirstEntry
 	cfg.CombineWith = o.CombineWith
 	cfg.ForceFlushTimeout = 100 * time.Millisecond
@@ -49,9 +49,10 @@ func TestTraceback(t *testing.T) {
 	_ = op.SetOutputs([]operator.Operator{fake})
 	mk := func(c, m string) *entry.Entry {
 		e := entry.New()
-		b := map[string]any{"MESSAGE": m}
+		b := map[string]any{"MESSAGE": m, "SYSLOG_IDENTIFIER": "kernel"}
 		if c != "" {
 			b["CONTAINER_NAME"] = c
+			b["SYSLOG_IDENTIFIER"] = c + "-id"
 		}
 		e.Body = b
 		return e

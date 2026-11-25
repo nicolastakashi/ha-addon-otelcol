@@ -100,10 +100,12 @@ resource_attributes: []
 logs: true
 logs_min_priority: info
 logs_min_severity: info
+logs_multiline: true
 logs_parse: false
 ha_metrics: true
 ha_traces: true
 host_metrics: true
+container_metrics: true
 profiles: false
 scrape_interval: 60s
 ```
@@ -133,12 +135,14 @@ scrape_interval: 60s
 | `logs` | bool | `true` | Send the Home Assistant OS system journal. |
 | `logs_min_priority` | `emerg`, `alert`, `crit`, `err`, `warning`, `notice`, `info`, `debug` | `info` | Journal pre-filter. Keep it at `info`. See the note below. |
 | `logs_min_severity` | `debug`, `info`, `warn`, `error`, `fatal` | `info` | Drops log records below this severity. Applied after the severity is parsed. Use this to cut volume. |
+| `logs_multiline` | bool | `true` | Send a Python traceback from a container as one log record instead of one per line. |
 | `logs_parse` | bool | `false` | Advanced. Turns JSON and Python log lines into attributes. See "Logs". |
 | `ha_traces` | bool | `true` | Send every automation and script run as a trace. |
 | `ha_metrics` | bool | `true` | Scrape Home Assistant's Prometheus endpoint. Needs the Prometheus integration. |
 | `host_metrics` | bool | `true` | Send CPU, memory, load, paging, network, data disk and uptime metrics of the machine. |
+| `container_metrics` | bool | `true` | Send CPU, memory, disk and network of Home Assistant Core, the Supervisor and every started add-on. |
 | `profiles` | bool | `false` | Experimental. Send profiles of Home Assistant's Python threads. See "Profiles (experimental)". |
-| `scrape_interval` | `<n>s` or `<n>m` | `60s` | How often `ha_metrics` and `host_metrics` collect. Must be greater than zero. Traces are polled every 10 s regardless. |
+| `scrape_interval` | `<n>s` or `<n>m` | `60s` | How often `ha_metrics`, `host_metrics` and `container_metrics` collect. Must be greater than zero. Traces are polled every 10 s regardless. |
 
 **Note:** Keep `logs_min_priority` at `info`. Docker writes every container line to the
 journal with priority 6 (`info`, stdout) or 3 (`err`, stderr). A stricter value such as
@@ -157,8 +161,9 @@ the kernel, the Supervisor, Home Assistant Core and every add-on container.
 
 ### What a log record contains
 
-The body is the journal `MESSAGE`, with ANSI colour codes removed. A Python traceback from
-a container arrives as one record: its lines are joined to the line that started it.
+The body is the journal `MESSAGE`, with ANSI colour codes removed. With `logs_multiline` (on by
+default), a Python traceback from a container arrives as one record: its lines are joined
+to the line that started it.
 
 For containers, the add-on reads the severity from the text. It recognises two formats:
 
@@ -284,6 +289,7 @@ The `host_metrics` option sends metrics of the machine that runs Home Assistant 
 | Network | `system.network.*`, except `system.network.connections` |
 | Uptime | `system.uptime` |
 | Disk | `system.filesystem.*` of the data partition (mount point `/data`) |
+| Containers (`container_metrics`) | `container.cpu.usage`, `container.memory.usage`, `container.disk.io`, `container.network.io` of Home Assistant Core, the Supervisor and every started add-on, labelled with `container.name` |
 
 ## Profiles (experimental)
 
@@ -385,7 +391,7 @@ The registry builds on semantic conventions v1.37.0.
 | `deployment.environment.name` | resource | all | Semconv |
 | `host.name` | resource | all | Semconv |
 | `service.version`, `os.type`, `os.description`, `host.arch` | resource | all | Semconv |
-| `container.name` | log | logs | Semconv |
+| `container.name` | log, metric | logs, host metrics | Semconv |
 | `systemd.unit` | log | logs | Custom |
 | `syslog.identifier` | log | logs | Custom |
 | `journald.boot_id` | log | logs | Custom |
@@ -484,8 +490,9 @@ loopback interface of the host network. Other processes on the host, including a
 with host networking, can send to them.
 
 The add-on needs the system journal (read-only), the Home Assistant and Supervisor APIs,
-host networking, and read-write access to the Home Assistant configuration folder to
-install the profiler integration. Its own AppArmor profile allows, besides its image
+host networking, the Supervisor `manager` role to read the resource usage of Core and the
+add-ons, and read-write access to the Home Assistant configuration folder to install the
+profiler integration. Its own AppArmor profile allows, besides its image
 files, reads of the journal, `/proc` and `/sys`, and writes only to `/data`, `/tmp` and
 `custom_components/otel_profiler`.
 

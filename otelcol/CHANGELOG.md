@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.8.0
+
+### Added
+
+- `container_metrics` option (on by default): CPU, memory, disk and network of Home
+  Assistant Core, the Supervisor and every started add-on (`container.*`, labelled with
+  `container.name`). The add-on now asks for the Supervisor `manager` role to read them
+- `logs_multiline` option (on by default) to turn off joining Python tracebacks
+
+### Fixed
+
+- Logs: no more "entry does not contain the source_identifier" warnings for host entries
+
 ## 0.7.0
 
 ### Added

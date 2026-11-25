@@ -1,0 +1,17 @@
+# Optional (logs_multiline: true, the default): one record per Python traceback.
+receivers:
+  journald:
+    operators:
+      # Docker writes one journal entry per line, so a Python traceback arrives as many
+      # entries. Join continuation lines (indented, "Traceback ...", chained-exception
+      # headers, the final "SomeError: ...") to the entry that started them, per container.
+      # Host services are never joined.
+      - type: recombine
+        combine_field: body.MESSAGE
+        # Every entry has one; for containers it is the container id.
+        source_identifier: body.SYSLOG_IDENTIFIER
+        is_first_entry: >-
+          body.CONTAINER_NAME == nil or type(body.MESSAGE) != "string" or
+          not (body.MESSAGE matches "^($|\\s|Traceback \\(most recent call last\\):|During handling of the above exception|The above exception was the direct cause|[A-Za-z_][A-Za-z0-9_.]*(Error|Exception|Exit|Interrupt)(:|$))")
+        combine_with: "\n"
+        force_flush_period: 2s

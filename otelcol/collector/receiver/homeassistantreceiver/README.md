@@ -2,7 +2,7 @@
 
 | Status | |
 |---|---|
-| Stability | development: traces |
+| Stability | development: traces, metrics |
 | Distributions | [otelcol-ha](../../builder-config.yaml) (Home Assistant add-on) |
 | Code owners | @nicolastakashi |
 
@@ -27,6 +27,13 @@ Each finished run becomes one trace:
   defined in a [Weaver](https://github.com/open-telemetry/weaver) registry, in
   [`model/homeassistant.yaml`](../../../../model/homeassistant.yaml).
 
+In a metrics pipeline the receiver reads, every `collection_interval`, the resource usage
+of Home Assistant Core, the Supervisor and every started add-on from the Supervisor
+(`/core/stats`, `/supervisor/stats`, `/addons/<slug>/stats`). It emits
+`container.cpu.usage`, `container.memory.usage`, `container.disk.io` and
+`container.network.io`, labelled with `container.name` (`homeassistant`,
+`hassio_supervisor`, `addon_<slug>`). This needs the Supervisor `manager` role.
+
 ## Configuration
 
 ```yaml
@@ -44,6 +51,8 @@ receivers:
 | `token` | none | Access token of an admin user. Required. |
 | `poll_interval` | `10s` | How often `trace/list` is polled. Must be positive. |
 | `domains` | `[automation, script]` | Domains whose runs are collected. Must not be empty. |
+| `supervisor_endpoint` | `http://supervisor` | Supervisor REST API, for container metrics. |
+| `collection_interval` | `60s` | How often container metrics are read. Must be positive. |
 
 On connection or polling errors the receiver reconnects with exponential backoff, from
 1 s up to 1 min.
